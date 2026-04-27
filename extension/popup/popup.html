@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>VideoGrab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:     #111113;
+      --bg2:    #18181b;
+      --bg3:    #222226;
+      --border: #2e2e35;
+      --accent: #6366f1;
+      --aglow:  rgba(99,102,241,.25);
+      --green:  #22c55e;
+      --gglow:  rgba(34,197,94,.25);
+      --red:    #ef4444;
+      --text:   #f0f0f2;
+      --muted:  #6b6b78;
+    }
+
+    body {
+      width: 370px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+    }
+
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo { display: flex; align-items: center; gap: 8px; }
+
+    .logo-icon {
+      width: 26px; height: 26px;
+      background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 10px var(--aglow);
+    }
+    .logo-icon svg { width: 13px; height: 13px; fill: white; }
+    .logo-name { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+    .logo-name span { color: var(--accent); }
+
+    .hbtns { display: flex; gap: 5px; }
+    .ibtn {
+      width: 26px; height: 26px;
+      border: 1px solid var(--border); background: var(--bg3);
+      border-radius: 5px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: all .12s;
+    }
+    .ibtn:hover { border-color: var(--accent); color: var(--accent); }
+    .ibtn svg { width: 12px; height: 12px; }
+
+    .sbar {
+      padding: 6px 14px; font-size: 11px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green); flex-shrink: 0;
+      animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .empty {
+      padding: 36px 20px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .empty-icon {
+      width: 44px; height: 44px;
+      border: 2px dashed var(--border); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); margin-bottom: 2px;
+    }
+    .empty-icon svg { width: 20px; height: 20px; }
+    .empty h3 { font-size: 13px; font-weight: 600; }
+    .empty p { font-size: 11px; color: var(--muted); line-height: 1.5; max-width: 210px; }
+
+    /* Настройки не заданы */
+    .setup-hint {
+      margin: 12px; padding: 10px 12px;
+      background: rgba(99,102,241,.08);
+      border: 1px solid rgba(99,102,241,.25);
+      border-radius: 8px;
+      font-size: 11px; color: var(--muted); line-height: 1.5;
+      text-align: center;
+    }
+    .setup-hint a { color: var(--accent); cursor: pointer; text-decoration: none; }
+
+    .list {
+      padding: 8px; display: flex; flex-direction: column; gap: 6px;
+      max-height: 460px; overflow-y: auto;
+    }
+    .list::-webkit-scrollbar { width: 3px; }
+    .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 11px;
+      animation: slideIn .15s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+
+    .card-tag {
+      display: inline-block;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .4px; text-transform: uppercase;
+      color: var(--accent); background: rgba(99,102,241,.12);
+      padding: 1px 6px; border-radius: 3px; margin-bottom: 5px;
+    }
+
+    .card-title {
+      font-size: 12px; font-weight: 600; line-height: 1.4;
+      margin-bottom: 10px;
+      overflow: hidden; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+
+    .qlabel { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+
+    .qgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; margin-bottom: 9px; }
+
+    .qbtn {
+      height: 36px; border: 1px solid var(--border); background: var(--bg3);
+      border-radius: 6px; cursor: pointer; transition: all .1s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1px; color: var(--muted);
+    }
+    .qbtn .qr { font-size: 11px; font-weight: 600; }
+    .qbtn .qs { font-size: 9px; opacity: .55; }
+    .qbtn:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.07); }
+    .qbtn.sel { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.13); }
+    .qbtn.best { border-color: rgba(34,197,94,.35); color: var(--green); }
+    .qbtn.best.sel { border-color: var(--green); background: rgba(34,197,94,.13); }
+    .qbtn.best:not(.sel):hover { border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.07); }
+    .qbtn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .actions { display: flex; gap: 5px; }
+
+    .btn {
+      flex: 1; height: 34px; border: none; border-radius: 7px;
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 5px; transition: all .12s;
+    }
+    .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-dl { background: var(--green); color: #fff; }
+    .btn-dl:hover:not(:disabled) { background: #16a34a; box-shadow: 0 0 12px var(--gglow); }
+    .btn-dl:active:not(:disabled) { transform: scale(.97); }
+    .btn-dl.loading { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); cursor: wait; }
+    .btn-dl.done { background: var(--accent); }
+    .btn-dl.error { background: var(--red); }
+
+    .btn-open {
+      flex: 0 0 34px;
+      background: var(--bg3); color: var(--muted); border: 1px solid var(--border);
+    }
+    .btn-open:hover { color: var(--text); border-color: #3a3a45; }
+
+    /* Прогресс-бар */
+    .progress-wrap {
+      margin-top: 8px;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+
+    .progress-bar-bg {
+      height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      transition: width .3s ease; width: 0%;
+    }
+    .progress-bar-fill.done { background: var(--green); }
+    .progress-bar-fill.error { background: var(--red); }
+
+    .progress-text {
+      font-size: 10px; color: var(--muted); margin-top: 4px;
+      display: flex; justify-content: space-between;
+    }
+
+    .footer {
+      padding: 7px 14px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer span { font-size: 10px; color: var(--muted); }
+    .footer a { font-size: 10px; color: var(--accent); cursor: pointer; text-decoration: none; }
+
+    .loading { padding: 36px 20px; text-align: center; color: var(--muted); font-size: 12px; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 10px;
+    }
+    @keyframes spin { to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="logo-name">Video<span>Grab</span></div>
+    </div>
+    <div class="hbtns">
+      <button class="ibtn" id="btnRefresh" title="Обновить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </button>
+      <button class="ibtn" id="btnSettings" title="Настройки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="ibtn" id="btnClear" title="Очистить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sbar">
+    <div class="dot"></div>
+    <span id="statusText">Сканирую...</span>
+  </div>
+
+  <div id="content">
+    <div class="loading"><div class="spinner"></div>загрузка...</div>
+  </div>
+
+  <div class="footer">
+    <span id="footerBackend">бэкенд не настроен</span>
+    <span>v0.8.0</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+<style>
+/* Цвета тегов платформ */
+.tag-youtube   { color: #ff4444; background: rgba(255,68,68,.12); }
+.tag-instagram { color: #e1306c; background: rgba(225,48,108,.12); }
+.tag-vk        { color: #4a76a8; background: rgba(74,118,168,.12); }
+.tag-getcourse { color: var(--accent); background: rgba(99,102,241,.12); }
+.tag-kinescope { color: var(--accent); background: rgba(99,102,241,.12); }
+
+/* Авто-качество для YouTube/VK/Instagram */
+.quality-auto {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--green);
+  background: rgba(34,197,94,.08);
+  border: 1px solid rgba(34,197,94,.2);
+  border-radius: 6px; padding: 5px 8px;
+  margin-bottom: 9px;
+}
+</style>
