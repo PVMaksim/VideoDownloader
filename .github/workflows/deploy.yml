@@ -24,25 +24,25 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd /home/deploy/videograb/backend
+            cd /home/deploy/videograb
 
             echo "📦 Pulling latest code..."
-            git -C /home/deploy/videograb pull origin main
+            git pull origin main
 
             echo "🐳 Rebuilding containers..."
-            docker compose build --no-cache api worker
+            docker compose -f backend/docker-compose.yml build --no-cache api worker
 
             echo "🚀 Restarting services..."
-            docker compose up -d --no-deps api worker
+            docker compose -f backend/docker-compose.yml up -d --force-recreate api worker
 
-            echo "⏳ Waiting for API to start..."
+            echo "⏳ Waiting for API..."
             sleep 5
 
             echo "🔍 Running migrations..."
-            docker compose exec -T api alembic upgrade head
+            docker compose -f backend/docker-compose.yml exec -T api alembic upgrade head
 
             echo "❤️  Health check..."
-            bash scripts/health_check.sh
+            curl -f http://localhost:8000/api/health || exit 1
 
             echo "✅ Deploy complete!"
 
@@ -51,4 +51,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_ADMIN_ID }}" \
-            -d text="🔴 VideoGrab deploy FAILED%0ABranch: ${{ github.ref_name }}%0ACommit: ${{ github.sha }}%0A${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -d text="🔴 VideoGrab deploy FAILED%0ABranch: ${{ github.ref_name }}%0ACommit: ${{ github.sha }}"
