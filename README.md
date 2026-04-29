@@ -52,7 +52,7 @@ VPS Backend (FastAPI + Celery)
 
 ```bash
 # 1. Скопируй папку backend-v2/ на VPS
-scp -r backend-v2/ user@your-vps:/home/deploy/videograb/
+scp -r backend / user@your-vps:/home/deploy/videograb/
 
 # 2. Зайди на VPS
 ssh user@your-vps
@@ -95,7 +95,7 @@ certbot --nginx -d api.yourdomain.com
 
 ## Переменные окружения
 
-Все описаны в `backend-v2/.env.example`:
+Все описаны в `backend /.env.example`:
 
 ```env
 # Обязательные
