@@ -168,3 +168,4 @@ SSH ключ (git push): id_ed25519
 SSH ключ (deploy CI/CD): github-actions-key
 Папка на VPS: /home/deploy/videograb
 ```
+# deploy test Wed Apr 29 13:47:45 MSK 2026
