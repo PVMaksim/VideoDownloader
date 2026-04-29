@@ -23,7 +23,10 @@ bearer_scheme = HTTPBearer()
 # ── Пароли ───────────────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    # bcrypt ограничивает пароль 72 байтами
+    pwd_bytes = password.encode('utf-8')[:72]
+    safe_pwd = pwd_bytes.decode('utf-8', errors='ignore')
+    return pwd_context.hash(safe_pwd)
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
