@@ -138,9 +138,9 @@
     .qbtn .qs { font-size: 9px; opacity: .55; }
     .qbtn:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.07); }
     .qbtn.sel { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.13); }
-    .qbtn.best { border-color: rgba(34,197,94,.35); color: var(--green); }
-    .qbtn.best.sel { border-color: var(--green); background: rgba(34,197,94,.13); }
-    .qbtn.best:not(.sel):hover { border-color: rgba(34,197,94,.6); background: rgba(34,197,94,.07); }
+    .qbtn.best { border-color: var(--border); color: var(--muted); }
+    .qbtn.best.sel { border-color: var(--green); color: var(--green); background: rgba(34,197,94,.13); }
+    .qbtn.best:not(.sel):hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.07); }
     .qbtn:disabled { opacity: .4; cursor: not-allowed; }
 
     .actions { display: flex; gap: 5px; }
@@ -244,8 +244,8 @@
   </div>
 
   <div class="footer">
-    <span id="footerBackend">бэкенд не настроен</span>
-    <span>v0.8.0</span>
+    <span id="footerStatus">бэкенд не настроен</span>
+    <span>v1.0.1</span>
   </div>
 
   <script src="popup.js"></script>

@@ -1,5 +1,3 @@
-cat > .gitignore << 'EOF'
-# Environment & Secrets
 .env
 .env.local
 .env.*.local
@@ -34,4 +32,3 @@ temp/
 # Extension build artifacts
 extension/build/
 *.zip
-EOF

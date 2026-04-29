@@ -52,11 +52,18 @@ function getPageVideo(tabUrl, tabTitle) {
   return null;
 }
 
+// Извлекаем хэш видео одинаковый для master и media URL
+function videoHash(url) {
+  const m = url.match(/\/playlist\/(?:master|media)\/([a-f0-9]{20,})/);
+  return m ? m[1] : urlKey(url);
+}
+
 function addVideo(tabId, url, pageTitle, overrides) {
-  const key = urlKey(url);
+  const hash = videoHash(url);
   const tab = getTab(tabId);
 
-  const existing = tab.videos.find(v => urlKey(v.url) === key);
+  // Дедупликация по хэшу — master и media одного видео не дублируются
+  const existing = tab.videos.find(v => videoHash(v.url) === hash);
   if (existing) {
     if (url.includes("/master/") && !existing.url.includes("/master/")) {
       existing.url = url;

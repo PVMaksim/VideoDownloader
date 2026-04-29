@@ -1,4 +1,4 @@
-// VideoGrab — Popup v0.9
+// VideoGrab — Popup v1.0 (JWT auth)
 
 const QUALITIES = [
   { label: "360p",  height: 360,  sub: "360p" },
@@ -8,30 +8,24 @@ const QUALITIES = [
 ];
 
 const PLATFORM_LABELS = {
-  getcourse: "GetCourse",
-  kinescope: "Kinescope",
-  youtube:   "YouTube",
-  instagram: "Instagram",
-  vk:        "VK",
-  hls:       "HLS",
+  getcourse: "GetCourse", kinescope: "Kinescope",
+  youtube: "YouTube", instagram: "Instagram", vk: "VK", hls: "HLS",
 };
 
-// Платформы где качество выбирается вручную (HLS)
 const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls"]);
-
-// Платформы где yt-dlp парсит страницу
 const PAGE_PLATFORMS = new Set(["youtube", "instagram", "vk"]);
 
 let backendUrl = "";
-let apiKey = "";
+let token = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const s = await chrome.storage.local.get(["backendUrl", "apiKey"]);
+  const s = await chrome.storage.local.get(["backendUrl", "token"]);
   backendUrl = (s.backendUrl || "").replace(/\/$/, "");
-  apiKey = s.apiKey || "";
-  updateFooter();
+  token = s.token || "";
 
+  updateFooter();
   loadVideos();
+
   document.getElementById("btnRefresh").addEventListener("click", loadVideos);
   document.getElementById("btnClear").addEventListener("click", () =>
     chrome.runtime.sendMessage({ type: "CLEAR_VIDEOS" }, loadVideos));
@@ -40,12 +34,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function updateFooter() {
-  const el = document.getElementById("footerBackend");
-  if (backendUrl) {
+  const el = document.getElementById("footerStatus");
+  if (!backendUrl) {
+    el.innerHTML = `⚠️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
+    el.style.color = "var(--muted)";
+  } else if (!token) {
+    el.innerHTML = `🔑 <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
+    el.style.color = "#f59e0b";
+  } else {
     el.textContent = "🟢 " + new URL(backendUrl).hostname;
     el.style.color = "var(--green)";
-  } else {
-    el.innerHTML = `⚠️ <a onclick="chrome.runtime.openOptionsPage()">настрой бэкенд</a>`;
   }
 }
 
@@ -53,6 +51,7 @@ function loadVideos() {
   document.getElementById("statusText").textContent = "Сканирую...";
   document.getElementById("content").innerHTML =
     `<div class="loading"><div class="spinner"></div>загрузка...</div>`;
+
   chrome.runtime.sendMessage({ type: "GET_VIDEOS" }, (res) => {
     const videos = res?.videos || [];
     videos.length === 0 ? renderEmpty() : renderList(videos);
@@ -89,10 +88,8 @@ function buildCard(video) {
   const platform = PLATFORM_LABELS[video.type] || "Видео";
   const title = cleanTitle(video.pageTitle);
   const isHls = HLS_PLATFORMS.has(video.type);
-  const isPage = PAGE_PLATFORMS.has(video.type);
   let selectedHeight = 1080;
 
-  // Блок выбора качества — только для HLS платформ
   const qualityBlock = isHls ? `
     <div class="qlabel">Качество</div>
     <div class="qgrid">
@@ -104,7 +101,7 @@ function buildCard(video) {
         </button>`).join("")}
     </div>` : `
     <div class="quality-auto">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
       Лучшее доступное качество
@@ -142,7 +139,6 @@ function buildCard(video) {
     </div>
   `;
 
-  // Переключение качества (только HLS)
   if (isHls) {
     card.querySelectorAll(".qbtn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -153,14 +149,11 @@ function buildCard(video) {
     });
   }
 
-  // Скачать
   card.querySelector(".btn-dl").addEventListener("click", () => {
-    if (!backendUrl || !apiKey) { chrome.runtime.openOptionsPage(); return; }
-    const height = isPage ? null : selectedHeight;
-    startDownload(video, height, card);
+    if (!backendUrl || !token) { chrome.runtime.openOptionsPage(); return; }
+    startDownload(video, PAGE_PLATFORMS.has(video.type) ? null : selectedHeight, card);
   });
 
-  // Открыть
   card.querySelector(".btn-open").addEventListener("click", () => {
     chrome.tabs.create({ url: video.url });
   });
@@ -196,13 +189,26 @@ async function startDownload(video, height, card) {
 
     const res = await fetch(`${backendUrl}/api/download`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,   // JWT вместо API ключа
+      },
       body: JSON.stringify(body),
     });
 
+    if (res.status === 402) {
+      const data = await res.json();
+      throw new Error(data.detail?.message || "Лимит исчерпан");
+    }
+    if (res.status === 401 || res.status === 403) {
+      token = "";
+      await chrome.storage.local.remove("token");
+      updateFooter();
+      throw new Error("Сессия истекла — войди снова в настройках");
+    }
     if (!res.ok) throw new Error(`Сервер вернул ${res.status}`);
-    const { task_id } = await res.json();
 
+    const { task_id } = await res.json();
     setDlState(dlBtn, "loading", "Скачивается...");
     pt.textContent = "Скачивается на сервере...";
 
@@ -210,7 +216,7 @@ async function startDownload(video, height, card) {
 
     chrome.downloads.download({
       url: `${backendUrl}/api/file/${task_id}`,
-      headers: [{ name: "X-API-Key", value: apiKey }],
+      headers: [{ name: "Authorization", value: `Bearer ${token}` }],
       saveAs: true,
     });
 
@@ -233,7 +239,7 @@ async function startDownload(video, height, card) {
       setDlState(dlBtn, "", "Скачать");
       pw.classList.remove("visible");
       pb.classList.remove("error");
-    }, 4000);
+    }, 5000);
   }
 }
 
@@ -242,14 +248,17 @@ async function pollStatus(taskId, pb, pt, pp) {
     const iv = setInterval(async () => {
       try {
         const res = await fetch(`${backendUrl}/api/status/${taskId}`, {
-          headers: { "X-API-Key": apiKey },
+          headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json();
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
         pp.textContent = pct + "%";
-        if (data.status === "ready") { clearInterval(iv); pb.style.width = "100%"; resolve(); }
-        else if (data.status === "error") { clearInterval(iv); reject(new Error(data.error || "Ошибка сервера")); }
+        if (data.status === "ready") {
+          clearInterval(iv); pb.style.width = "100%"; resolve();
+        } else if (data.status === "error") {
+          clearInterval(iv); reject(new Error(data.error || "Ошибка сервера"));
+        }
       } catch(e) { clearInterval(iv); reject(e); }
     }, 1500);
   });

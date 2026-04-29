@@ -1,0 +1,57 @@
+name: Deploy VideoGrab Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"          # деплоим только если изменился бэкенд
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Чекаут ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Деплой на VPS по SSH ─────────────────────────────────
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/deploy/videograb/backend
+
+            echo "📦 Pulling latest code..."
+            git -C /home/deploy/videograb pull origin main
+
+            echo "🐳 Rebuilding containers..."
+            docker-compose build --no-cache api worker
+
+            echo "🚀 Restarting services..."
+            docker-compose up -d --no-deps api worker
+
+            echo "⏳ Waiting for API to start..."
+            sleep 5
+
+            echo "🔍 Running migrations..."
+            docker-compose exec -T api alembic upgrade head
+
+            echo "❤️  Health check..."
+            bash scripts/health_check.sh
+
+            echo "✅ Deploy complete!"
+
+      # ── 3. Уведомление об ошибке ────────────────────────────────
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_ADMIN_ID }}" \
+            -d text="🔴 VideoGrab deploy FAILED%0ABranch: ${{ github.ref_name }}%0ACommit: ${{ github.sha }}%0A${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
