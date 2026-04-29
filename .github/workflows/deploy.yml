@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "backend/**"          # деплоим только если изменился бэкенд
+      - "backend/**"
       - ".github/workflows/deploy.yml"
 
 jobs:
@@ -13,16 +13,14 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ── 1. Чекаут ──────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Деплой на VPS по SSH ─────────────────────────────────
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: deploy
+          username: ru_server
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -32,23 +30,22 @@ jobs:
             git -C /home/deploy/videograb pull origin main
 
             echo "🐳 Rebuilding containers..."
-            docker-compose build --no-cache api worker
+            docker compose build --no-cache api worker
 
             echo "🚀 Restarting services..."
-            docker-compose up -d --no-deps api worker
+            docker compose up -d --no-deps api worker
 
             echo "⏳ Waiting for API to start..."
             sleep 5
 
             echo "🔍 Running migrations..."
-            docker-compose exec -T api alembic upgrade head
+            docker compose exec -T api alembic upgrade head
 
             echo "❤️  Health check..."
             bash scripts/health_check.sh
 
             echo "✅ Deploy complete!"
 
-      # ── 3. Уведомление об ошибке ────────────────────────────────
       - name: Notify on failure
         if: failure()
         run: |
