@@ -27,7 +27,10 @@ jobs:
           ssh -i /tmp/key -o StrictHostKeyChecking=no ru_server@$VPS_HOST "
             set -e
             cd /home/deploy/videograb
-            git pull origin main
+            
+            # Синхронизируем с remote, игнорируя локальные изменения
+            git fetch origin main
+            git reset --hard origin/main
             
             if [ ! -f backend/.env ]; then
               echo 'POSTGRES_USER=videograb' > backend/.env
