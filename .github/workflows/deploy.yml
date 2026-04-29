@@ -16,12 +16,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ru_server
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
             cd /home/deploy/videograb
@@ -29,17 +33,16 @@ jobs:
             echo "📦 Pulling latest code..."
             git pull origin main
 
-            # Создаём .env если его нет (берём из секретов или дефолтные значения)
             if [ ! -f backend/.env ]; then
               echo "⚙️ Creating .env..."
-              cat > backend/.env <<EOF
-            POSTGRES_USER=videograb
-            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-            POSTGRES_DB=videograb
-            DATABASE_URL=postgresql+asyncpg://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
-            DATABASE_URL_SYNC=postgresql://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            EOF
+              cat > backend/.env <<'ENVEOF'
+POSTGRES_USER=videograb
+POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+POSTGRES_DB=videograb
+DATABASE_URL=postgresql+asyncpg://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
+DATABASE_URL_SYNC=postgresql://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
+SECRET_KEY=${{ secrets.SECRET_KEY }}
+ENVEOF
             fi
 
             echo "🐳 Rebuilding containers..."
@@ -64,4 +67,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_ADMIN_ID }}" \
-            -d text="🔴 VideoGrab deploy FAILED%0ABranch: ${{ github.ref_name }}%0ACommit: ${{ github.sha }}"
+            -d text="🔴 Deploy FAILED"
