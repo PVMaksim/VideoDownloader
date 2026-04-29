@@ -1,16 +1,48 @@
-name: Test SSH
-on: push
+name: Deploy VideoGrab Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy.yml"
+
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Test SSH
+
+      - name: Deploy to VPS
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           echo "$SSH_KEY" > /tmp/key
           chmod 600 /tmp/key
-          ssh -i /tmp/key -o StrictHostKeyChecking=no ru_server@$VPS_HOST "echo OK"
+          
+          ssh -i /tmp/key -o StrictHostKeyChecking=no ru_server@$VPS_HOST "
+            set -e
+            cd /home/deploy/videograb
+            git pull origin main
+            
+            if [ ! -f backend/.env ]; then
+              echo 'POSTGRES_USER=videograb' > backend/.env
+              echo 'POSTGRES_PASSWORD=$DB_PASSWORD' >> backend/.env
+              echo 'POSTGRES_DB=videograb' >> backend/.env
+              echo 'DATABASE_URL=postgresql+asyncpg://videograb:$DB_PASSWORD@db:5432/videograb' >> backend/.env
+              echo 'DATABASE_URL_SYNC=postgresql://videograb:$DB_PASSWORD@db:5432/videograb' >> backend/.env
+              echo 'SECRET_KEY=$SECRET_KEY' >> backend/.env
+            fi
+            
+            docker compose -f backend/docker-compose.yml build --no-cache api worker
+            docker compose -f backend/docker-compose.yml up -d --force-recreate api worker
+            sleep 5
+            docker compose -f backend/docker-compose.yml exec -T api alembic upgrade head
+            curl -f http://localhost:8000/api/health || exit 1
+          "
+          
+          rm -f /tmp/key
