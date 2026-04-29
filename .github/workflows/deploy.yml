@@ -29,6 +29,19 @@ jobs:
             echo "📦 Pulling latest code..."
             git pull origin main
 
+            # Создаём .env если его нет (берём из секретов или дефолтные значения)
+            if [ ! -f backend/.env ]; then
+              echo "⚙️ Creating .env..."
+              cat > backend/.env <<EOF
+            POSTGRES_USER=videograb
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+            POSTGRES_DB=videograb
+            DATABASE_URL=postgresql+asyncpg://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
+            DATABASE_URL_SYNC=postgresql://videograb:${{ secrets.DB_PASSWORD }}@db:5432/videograb
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            EOF
+            fi
+
             echo "🐳 Rebuilding containers..."
             docker compose -f backend/docker-compose.yml build --no-cache api worker
 
