@@ -10,6 +10,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,23 +29,22 @@ jobs:
             set -e
             cd /home/deploy/videograb
             
-            # Синхронизируем с remote, игнорируя локальные изменения
             git fetch origin main
             git reset --hard origin/main
             
             if [ ! -f backend/.env ]; then
               echo 'POSTGRES_USER=videograb' > backend/.env
-              echo 'POSTGRES_PASSWORD=$DB_PASSWORD' >> backend/.env
+              echo \"POSTGRES_PASSWORD='${DB_PASSWORD}'\" >> backend/.env
               echo 'POSTGRES_DB=videograb' >> backend/.env
-              echo 'DATABASE_URL=postgresql+asyncpg://videograb:$DB_PASSWORD@db:5432/videograb' >> backend/.env
-              echo 'DATABASE_URL_SYNC=postgresql://videograb:$DB_PASSWORD@db:5432/videograb' >> backend/.env
-              echo 'SECRET_KEY=$SECRET_KEY' >> backend/.env
+              echo \"DATABASE_URL='postgresql+asyncpg://videograb:${DB_PASSWORD}@db:5432/videograb'\" >> backend/.env
+              echo \"DATABASE_URL_SYNC='postgresql://videograb:${DB_PASSWORD}@db:5432/videograb'\" >> backend/.env
+              echo \"SECRET_KEY='${SECRET_KEY}'\" >> backend/.env
             fi
             
             docker compose -f backend/docker-compose.yml build --no-cache api worker
             docker compose -f backend/docker-compose.yml up -d --force-recreate api worker
-            sleep 5
-            docker compose -f backend/docker-compose.yml exec -T api alembic upgrade head
+            sleep 10
+            docker compose -f backend/docker-compose.yml exec -T api bash -c 'cd /app && alembic upgrade head'
             curl -f http://localhost:8000/api/health || exit 1
           "
           
