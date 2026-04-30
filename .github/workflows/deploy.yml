@@ -41,14 +41,34 @@ jobs:
               echo \"SECRET_KEY='${SECRET_KEY}'\" >> backend/.env
             fi
             
+            echo 'Building containers...'
             docker compose -f backend/docker-compose.yml build --no-cache api worker
+            
+            echo 'Starting services...'
             docker compose -f backend/docker-compose.yml up -d --force-recreate api worker
-            sleep 10
             
-            # Пробуем запустить миграции (не критично, если не получится)
-            docker compose -f backend/docker-compose.yml exec -T api bash -c 'cd /app && alembic upgrade head' || echo 'Warning: alembic failed, run manually if needed'
+            echo 'Waiting for API to start...'
+            sleep 20
             
-            curl -f http://localhost:8000/api/health || exit 1
+            echo 'Checking container status...'
+            docker compose -f backend/docker-compose.yml ps api
+            
+            echo 'Checking API logs...'
+            docker compose -f backend/docker-compose.yml logs --tail=50 api || true
+            
+            echo 'Health check with retries...'
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost:8000/api/health; then
+                echo 'API is healthy!'
+                exit 0
+              fi
+              echo \"Attempt \$i failed, waiting 5s...\"
+              sleep 5
+            done
+            
+            echo 'Health check failed after 5 attempts'
+            docker compose -f backend/docker-compose.yml logs api
+            exit 1
           "
           
           rm -f /tmp/key
