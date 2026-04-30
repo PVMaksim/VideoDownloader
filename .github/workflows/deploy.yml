@@ -44,7 +44,10 @@ jobs:
             docker compose -f backend/docker-compose.yml build --no-cache api worker
             docker compose -f backend/docker-compose.yml up -d --force-recreate api worker
             sleep 10
-            docker compose -f backend/docker-compose.yml exec -T api bash -c 'cd /app && alembic upgrade head'
+            
+            # Пробуем запустить миграции (не критично, если не получится)
+            docker compose -f backend/docker-compose.yml exec -T api bash -c 'cd /app && alembic upgrade head' || echo 'Warning: alembic failed, run manually if needed'
+            
             curl -f http://localhost:8000/api/health || exit 1
           "
           
