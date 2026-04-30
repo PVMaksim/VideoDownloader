@@ -2,7 +2,7 @@
 
 ## Стек
 - Язык: Python 3.12
-- Фреймворк: FastAPI 0.115, Uvicorn, SQLAlchemy 2.0 (async), Celery 5.4
+- Фреймворк: FastAPI 0.115+, Uvicorn, SQLAlchemy 2.0 (async), Celery 5.4
 - БД: PostgreSQL 16, Redis 7
 - Инфраструктура: Docker, docker-compose, GitHub Actions, VPS (Ubuntu)
 
