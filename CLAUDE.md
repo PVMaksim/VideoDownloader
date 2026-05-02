@@ -2,7 +2,7 @@
 
 ## Стек
 - Язык: Python 3.12
-- Фреймворк: FastAPI 0.115+, Uvicorn, SQLAlchemy 2.0 (async), Celery 5.4
+- Фреймворк: FastAPI 0.115, Uvicorn, SQLAlchemy 2.0 (async), Celery 5.4
 - БД: PostgreSQL 16, Redis 7
 - Инфраструктура: Docker, docker-compose, GitHub Actions, VPS (Ubuntu)
 
@@ -10,8 +10,8 @@
 Бэкенд для сервиса скачивания и обработки видео. Основные модули:
 - `src/auth/` — JWT-аутентификация, регистрация, хеширование паролей (bcrypt)
 - `src/db/` — модели SQLAlchemy, миграции Alembic, асинхронное подключение
-- `src/api/` — REST-эндпоинты (health, video tasks)
-- `worker.py` — Celery-воркер для фоновых задач
+- `src/api/` — REST-эндпоинты (префикс `/api`: health, status, history, download)
+- `worker.py` — Celery-воркер для фоновых задач скачивания
 - `main.py` — точка входа FastAPI-приложения
 
 ## Правила написания кода
@@ -27,3 +27,4 @@
 - Чёткие, описательные имена функций и переменных (на английском)
 - Документировать все публичные интерфейсы
 - При изменении `requirements.txt` — проверять совместимость `bcrypt` с `passlib`
+- Локальный `.env` находится в папке `backend/`, API доступен на порту 8010

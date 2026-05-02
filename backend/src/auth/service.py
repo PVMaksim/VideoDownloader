@@ -1,5 +1,7 @@
+# Authentication service — JWT, passwords, email verification
 """
-Authentication service — JWT, passwords, email verification
+Authentication service handling JWT, password hashing, and email verification flow.
+Respects SKIP_EMAIL_VERIFICATION flag for local development.
 """
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -18,6 +20,11 @@ from db.models import User, Plan
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
+
+
+def _is_dev_skip_verification() -> bool:
+    """Check if email verification should be bypassed in dev mode."""
+    return str(getattr(settings, "SKIP_EMAIL_VERIFICATION", "")).lower() == "true"
 
 
 # ── Пароли ───────────────────────────────────────────────────────
@@ -72,7 +79,8 @@ async def get_current_user(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
-    if not user.is_verified:
+    # Пропускаем проверку email, если включён dev-режим
+    if not user.is_verified and not _is_dev_skip_verification():
         raise HTTPException(
             status_code=403,
             detail={
@@ -91,12 +99,14 @@ async def create_user(email: str, password: str, db: AsyncSession) -> User:
     if result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email уже зарегистрирован")
 
-    token = secrets.token_urlsafe(32)   # случайный токен верификации
+    is_verified = _is_dev_skip_verification()
+    token = None if is_verified else secrets.token_urlsafe(32)
+    
     user = User(
         email=email.lower(),
         password_hash=hash_password(password),
         plan=Plan.FREE,
-        is_verified=False,
+        is_verified=is_verified,
         verification_token=token,
     )
     db.add(user)
@@ -150,7 +160,8 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
-    if not user.is_verified:
+    # Пропускаем проверку email, если включён dev-режим
+    if not user.is_verified and not _is_dev_skip_verification():
         raise HTTPException(
             status_code=403,
             detail={
