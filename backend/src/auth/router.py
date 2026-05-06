@@ -1,19 +1,23 @@
 """
 Auth endpoints — register, verify, login, me, resend
 """
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.email import send_verification_email, send_welcome_email
+from auth.service import (
+    authenticate_user,
+    create_access_token,
+    create_user,
+    get_current_user,
+    resend_verification,
+    verify_email_token,
+)
 from db.database import get_db
 from db.models import User
-from auth.service import (
-    create_user, authenticate_user, verify_email_token,
-    resend_verification, create_access_token, get_current_user
-)
-from auth.email import send_verification_email, send_welcome_email
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 # ── Схемы ────────────────────────────────────────────────────────
@@ -64,8 +68,7 @@ async def register(
 
     # Отправляем письмо в фоне — не блокируем ответ
     background_tasks.add_task(
-        send_verification_email, user.email, user.verification_token
-    )
+        send_verification_email, user.email  , user.verification_token )  # type: ignore[arg-type]  
 
     return MessageResponse(
         message=f"Аккаунт создан. Проверь почту {req.email} — отправили письмо с подтверждением."
@@ -82,7 +85,7 @@ async def verify_email(
     user = await verify_email_token(token, db)
 
     # Welcome письмо только при первой верификации
-    background_tasks.add_task(send_welcome_email, user.email)
+    background_tasks.add_task(send_welcome_email, user.email or "")  # type: ignore[arg-type]
 
     return MessageResponse(message="Email подтверждён! Теперь можешь войти.")
 
@@ -98,8 +101,7 @@ async def resend(
 
     if user:
         background_tasks.add_task(
-            send_verification_email, user.email, user.verification_token
-        )
+            send_verification_email, user.email  , user.verification_token )  # type: ignore[arg-type]  
 
     # Всегда отвечаем одинаково — не раскрываем существование аккаунта
     return MessageResponse(
@@ -111,7 +113,7 @@ async def resend(
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Login and return JWT token"""
     user = await authenticate_user(req.email, req.password, db)
-    return TokenResponse(access_token=create_access_token(user.id))
+    return TokenResponse(access_token=create_access_token(user.id )  )
 
 
 @router.get("/me", response_model=UserResponse)
@@ -121,11 +123,10 @@ async def me(
 ):
     """Get current user info"""
     from downloads.service import count_downloads_today
-    today = await count_downloads_today(current_user.id, db)
+    today = await count_downloads_today(current_user.id ,   db)  
     return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
+        id=current_user.id ,   email=current_user.email  ,
         plan=current_user.plan,
         is_verified=current_user.is_verified,
         downloads_today=today,
-    )
+    )  # type: ignore[union-attr]

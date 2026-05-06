@@ -1,65 +1,64 @@
-"""Database models for VideoGrab"""
 import enum
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Enum, Text, func
-from sqlalchemy.orm import DeclarativeBase, relationship
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
     pass
 
-
-class Plan(str, enum.Enum):
-    FREE = "free"
-    PRO  = "pro"
-
-
-class DownloadStatus(str, enum.Enum):
-    QUEUED      = "queued"
+class DownloadStatus(enum.StrEnum):
+    QUEUED = "queued"
     DOWNLOADING = "downloading"
-    READY       = "ready"
-    ERROR       = "error"
+    READY = "ready"
+    ERROR = "error"
 
+class Plan(enum.StrEnum):
+    FREE = "free"
+    PRO = "pro"
+    BUSINESS = "business"
 
 class User(Base):
     __tablename__ = "users"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    email         = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    plan          = Column(Enum(Plan), default=Plan.FREE, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    plan: Mapped[Plan] = mapped_column(Enum(Plan, values_callable=lambda x: [e.value for e in x]), default=Plan.FREE, nullable=False)
 
-    # Email верификация
-    is_verified       = Column(Boolean, default=False, nullable=False)
-    verification_token = Column(String(255), nullable=True, index=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verification_token: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
-    is_active  = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    subscription_status: Mapped[str | None] = mapped_column(String(50), default=None, nullable=True)
+    subscription_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
     downloads = relationship("Download", back_populates="user", lazy="dynamic")
-
-    def __repr__(self):
-        return f"<User {self.email} verified={self.is_verified}>"
-
 
 class Download(Base):
     __tablename__ = "downloads"
 
-    id      = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
 
-    task_id  = Column(String(36), unique=True, index=True, nullable=False)
-    status   = Column(Enum(DownloadStatus), default=DownloadStatus.QUEUED)
-    progress = Column(Integer, default=0)
+    task_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, nullable=False)
+    status: Mapped[DownloadStatus] = mapped_column(Enum(DownloadStatus, values_callable=lambda x: [e.value for e in x]), default=DownloadStatus.QUEUED)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
 
-    video_url = Column(Text, nullable=False)
-    title     = Column(String(500))
-    filename  = Column(String(500))
-    height    = Column(Integer)
-    platform  = Column(String(50))
+    video_url: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(500))
+    filename: Mapped[str | None] = mapped_column(String(500))
+    height: Mapped[int | None] = mapped_column(Integer)
+    platform: Mapped[str | None] = mapped_column(String(50))
 
-    error_message = Column(Text)
-    created_at    = Column(DateTime, default=func.now())
-    updated_at    = Column(DateTime, default=func.now(), onupdate=func.now())
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="downloads")

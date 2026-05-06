@@ -1,40 +1,104 @@
-# VideoGrab Backend
+# VideoDownloader Backend
 
-Бэкенд-часть сервиса VideoGrab для скачивания, обработки и управления видео. Включает REST API на FastAPI, систему аутентификации (JWT), фоновые задачи на Celery и автоматический деплой через GitHub Actions.
+Multi-user API для скачивания видео с ограничениями по качеству и квотам. Поддерживает YouTube, VK, GetCourse и другие платформы. Включает аутентификацию, email-верификацию, Stripe-биллинг и очередь задач.
 
 ## Быстрый старт (локально)
-```bash
-cd backend
-# Убедись, что файл .env заполнен (POSTGRES_PASSWORD, SECRET_KEY и т.д.)
-docker compose up --build
 
-API будет доступен по http://localhost:8010.
-Деплой на VPS
-Деплой выполняется автоматически при пуше в ветку main через GitHub Actions.
-Для ручного запуска:
-ssh deploy@<VPS_IP> "cd /opt/videograb && docker compose up -d --build"
+```bash
+# 1. Клонировать и подготовить окружение
+git clone <repo>
+cd backend
+python -m venv .venv && source .venv/bin/activate
+
+# 2. Установить зависимости
+pip install uv && uv pip install -r pyproject.toml
+
+# 3. Настроить переменные окружения
+cp .env.example .env  # заполнить DATABASE_URL, JWT_SECRET, etc.
+
+# 4. Запустить сервер
+uvicorn src.main:app --reload
+
+# 5. Проверить здоровье
+curl http://localhost:8000/api/health
+
+API Документация
+После запуска откройте в браузере:
+🔹 Swagger UI: http://localhost:8000/docs
+🔹 ReDoc: http://localhost:8000/redoc
+Основные эндпоинты
+Метод	Путь	Описание
+POST	`/api/auth/register`	Регистрация пользователя
+POST	`/api/auth/login`	Получение JWT-токена
+POST	`/api/download`	Создать задачу скачивания
+GET	`/api/status/{id}`	Статус задачи
+GET	`/api/file/{id}`	Скачать готовый файл
+GET	`/api/history`	История скачиваний
+GET	`/api/me`	Профиль пользователя
 
 Переменные окружения
-Основные переменные задаются в backend/.env:
-POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB — учётные данные PostgreSQL
-DATABASE_URL, DATABASE_URL_SYNC — строки подключения (asyncpg / psycopg2)
-SECRET_KEY — секретный ключ для JWT
-REDIS_URL — подключение к Redis
-SKIP_EMAIL_VERIFICATION=true — отключает проверку email в dev-режиме
-Структура проекта
+Все настройки — в файле .env:
+
+# Приложение
+APP_NAME=VideoGrab
+DEBUG=true
+
+# База данных
+DATABASE_URL=sqlite+aiosqlite:///./videograb.db
+
+# JWT
+JWT_SECRET=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Лимиты
+DAILY_LIMIT=3
+FREE_MAX_HEIGHT=720
+
+# Email (опционально)
+RESEND_API_KEY=
+SKIP_EMAIL_VERIFICATION=true  # для локальной разработки
+
+# Stripe (опционально)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 
 backend/
-├── .env               # Переменные окружения
-├── docker-compose.yml # Оркестрация сервисов
 ├── src/
-│   ├── auth/          # Аутентификация, JWT, хеширование
-│   ├── db/            # Модели SQLAlchemy, Alembic
-│   └── api/           # Эндпоинты FastAPI (префикс /api)
-├── worker.py          # Celery-воркер
-└── main.py            # Точка входа
-extension/             # Браузерное расширение
+│   ├── main.py              # FastAPI app, middleware
+│   ├── config.py           # Pydantic settings
+│   ├── db/                 # SQLAlchemy models, database
+│   ├── auth/               # Authentication endpoints
+│   ├── downloads/          # Download queue & logic
+│   ├── billing/            # Stripe integration
+│   └── worker/             # Celery tasks (ready)
+├── tests/
+│   ├── conftest.py         # Fixtures, mocks
+│   └── test_integration.py # E2E тесты
+├── pyproject.toml          # Зависимости
+├── pytest.ini              # Настройки тестов
+├── ruff.toml               # Линтинг
+├── mypy.ini                # Типизация
+└── .env.example            # Шаблон переменных
 
-Тестирование
+# Запустить все тесты
+pytest tests/ -v
 
-cd backend
-pytest
+# Запустить конкретный тест
+pytest tests/test_integration.py::test_download_flow -v
+
+# С покрытием
+pytest --cov=src tests/
+
+# 1. Собрать образ
+docker build -t videograb-backend .
+
+# 2. Запустить (пример)
+docker run -d \
+  -p 8000:8000 \
+  --env-file .env \
+  -v ./downloads:/app/downloads \
+  videograb-backend
+
+  Лицензия
+MIT
+EOF

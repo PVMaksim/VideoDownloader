@@ -1,16 +1,14 @@
 """
 Celery tasks — background video downloading
 """
-import asyncio
 import logging
 import re
 import shutil
 from pathlib import Path
 
 from celery import Celery
-from sqlalchemy import select, update
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
 
 from config import settings
 from db.models import Download, DownloadStatus

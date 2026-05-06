@@ -1,20 +1,19 @@
-"""
-VideoGrab Backend v2 — Multi-user API with email verification
-"""
+"""VideoGrab Backend v2 — Multi-user API with email verification"""
 import asyncio
 import logging
 import shutil
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth.router import router as auth_router
+from billing.router import router as billing_router
 from config import settings
 from db.database import engine
 from db.models import Base
-from auth.router import router as auth_router
 from downloads.router import router as downloads_router
 
 logging.basicConfig(
@@ -39,11 +38,12 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(downloads_router)
+app.include_router(billing_router)
 
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.0.0", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ok", "version": "2.0.0", "timestamp": datetime.now(UTC).isoformat()}
 
 
 @app.on_event("startup")

@@ -1,0 +1,18 @@
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "E501",  # line-length — URL и сообщения могут быть длинными
+    "E701",  # multiple statements — допустимо в простых if
+    "UP042", # StrEnum — пока оставляем str+Enum для совместимости
+]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["E402", "E501"]
+"src/config.py" = ["E501"]
+"src/worker/tasks.py" = ["UP"]  # Celery legacy code
+
+[lint.isort]
+known-first-party = ["auth", "billing", "db", "downloads", "worker", "config"]

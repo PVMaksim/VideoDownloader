@@ -3,6 +3,7 @@ Email service — sends verification emails via Resend API
 resend.com — 3000 бесплатных писем в месяц, простая интеграция
 """
 import logging
+
 import resend
 
 from config import settings
@@ -45,6 +46,10 @@ async def send_verification_email(email: str, token: str):
     </html>
     """
 
+    # Skip sending in test/dev mode
+    if getattr(settings, 'SKIP_EMAIL_VERIFICATION', False) or getattr(settings, 'DISABLE_EMAIL_SENDING', False):
+        log.info(f'Email sending disabled, skipping: {email}')
+        return
     try:
         resend.Emails.send({
             "from": settings.EMAIL_FROM,
@@ -93,6 +98,10 @@ async def send_welcome_email(email: str):
     </html>
     """
 
+    # Skip sending in test/dev mode
+    if getattr(settings, 'SKIP_EMAIL_VERIFICATION', False) or getattr(settings, 'DISABLE_EMAIL_SENDING', False):
+        log.info(f'Email sending disabled, skipping: {email}')
+        return
     try:
         resend.Emails.send({
             "from": settings.EMAIL_FROM,

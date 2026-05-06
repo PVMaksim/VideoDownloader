@@ -4,11 +4,10 @@ Authentication service handling JWT, password hashing, and email verification fl
 Respects SKIP_EMAIL_VERIFICATION flag for local development.
 """
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -16,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
 from db.database import get_db
-from db.models import User, Plan
+from db.models import Plan, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
@@ -44,7 +43,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: int) -> str:
     """Create JWT access token"""
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     return jwt.encode(
@@ -53,7 +52,7 @@ def create_access_token(user_id: int) -> str:
         algorithm=settings.ALGORITHM,
     )
 
-def decode_token(token: str) -> Optional[int]:
+def decode_token(token: str) -> int | None:
     """Decode JWT, return user_id or None"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -67,7 +66,7 @@ def decode_token(token: str) -> Optional[int]:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> User | None:
     """FastAPI dependency — returns authenticated user"""
     user_id = decode_token(credentials.credentials)
     if not user_id:
@@ -93,7 +92,7 @@ async def get_current_user(
 
 # ── Регистрация ───────────────────────────────────────────────────
 
-async def create_user(email: str, password: str, db: AsyncSession) -> User:
+async def create_user(email: str, password: str, db: AsyncSession) -> User | None:
     """Register new unverified user"""
     result = await db.execute(select(User).where(User.email == email.lower()))
     if result.scalar_one_or_none():
@@ -101,7 +100,7 @@ async def create_user(email: str, password: str, db: AsyncSession) -> User:
 
     is_verified = _is_dev_skip_verification()
     token = None if is_verified else secrets.token_urlsafe(32)
-    
+
     user = User(
         email=email.lower(),
         password_hash=hash_password(password),
@@ -116,7 +115,7 @@ async def create_user(email: str, password: str, db: AsyncSession) -> User:
 
 # ── Верификация email ─────────────────────────────────────────────
 
-async def verify_email_token(token: str, db: AsyncSession) -> User:
+async def verify_email_token(token: str, db: AsyncSession) -> User | None:
     """Verify email by token, activate user"""
     result = await db.execute(
         select(User).where(User.verification_token == token)
@@ -134,7 +133,7 @@ async def verify_email_token(token: str, db: AsyncSession) -> User:
     return user
 
 
-async def resend_verification(email: str, db: AsyncSession) -> User:
+async def resend_verification(email: str, db: AsyncSession) -> User | None:
     """Generate new verification token and resend email"""
     result = await db.execute(select(User).where(User.email == email.lower()))
     user = result.scalar_one_or_none()
@@ -152,7 +151,7 @@ async def resend_verification(email: str, db: AsyncSession) -> User:
 
 # ── Логин ─────────────────────────────────────────────────────────
 
-async def authenticate_user(email: str, password: str, db: AsyncSession) -> User:
+async def authenticate_user(email: str, password: str, db: AsyncSession) -> User | None:
     """Verify credentials. Email must be verified to get token."""
     result = await db.execute(select(User).where(User.email == email.lower()))
     user = result.scalar_one_or_none()
