@@ -3,3 +3,13 @@
 *_test.db
 .pytest_cache/
 __pycache__/
+
+# CI/CD artifacts
+.coverage
+coverage.xml
+bandit-report.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
