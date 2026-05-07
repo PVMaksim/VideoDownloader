@@ -2,10 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Системные зависимости
+# Минимальные системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Копируем зависимости
 COPY pyproject.toml ./
@@ -16,10 +17,9 @@ COPY src/ src/
 COPY tests/ tests/
 COPY pytest.ini ruff.toml mypy.ini ./
 
-# Создаём директорию для файлов
+# Директория для файлов
 RUN mkdir -p /app/downloads && chmod 755 /app/downloads
 
-# Переменные окружения
 ENV PYTHONPATH=/app/src \
     DOWNLOAD_DIR=/app/downloads \
     DATABASE_URL=sqlite+aiosqlite:///./videograb.db \
@@ -28,7 +28,6 @@ ENV PYTHONPATH=/app/src \
 
 EXPOSE 8000
 
-# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/api/health || exit 1
 
