@@ -3,16 +3,19 @@
 ## Стек
 - Язык: Python 3.12
 - Фреймворк: FastAPI 0.109+, SQLAlchemy 2.0 (Mapped/declarative)
-- БД: SQLite (aiosqlite), PostgreSQL (готов к переключению)
-- Аутентификация: JWT (python-jose), bcrypt (passlib)
-- Тестирование: pytest, pytest-asyncio, httpx TestClient
-- Линтинг: ruff (стиль + pyupgrade), mypy (статическая типизация)
-- Инфраструктура: Docker, GitHub Actions CI/CD, Celery (заглушка)
+- БД: PostgreSQL (production), SQLite (local)
+- Кэш: Redis (для Celery/Worker)
+- Инфраструктура: Docker, GitHub Actions CI/CD, VPS (Ubuntu)
 
 ## Архитектура
 Многопользовательский API для скачивания видео с системой ролей, лимитов качества и подписок.
-Модули: `auth` (регистрация, верификация, JWT), `downloads` (очередь задач, парсинг ссылок), `billing` (Stripe webhook), `worker` (Celery tasks).
+Модули: `auth` (JWT, регистрация), `downloads` (очередь задач, парсинг ссылок), `billing` (Stripe webhook), `worker` (Celery tasks с ffmpeg).
 Асинхронная архитектура на `asyncio` + `SQLAlchemy 2.0`.
+
+## Важные детали запуска
+- **Docker CMD:** `uvicorn` запускается через `python -m uvicorn`, чтобы избежать проблем с PATH в slim-образах.
+- **Порты:** API проброшен на порт `8001` (из-за конфликта с другим проектом на 8000).
+- **Worker:** Требует большого объема памяти при сборке (установка ffmpeg). На слабых VPS может потребоваться swap или раздельная сборка.
 
 ## Правила написания кода
 - Все функции — с docstrings на английском
