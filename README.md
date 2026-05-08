@@ -1,5 +1,8 @@
 # VideoDownloader Backend
 
+[![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml)
+[![Codecov](https://codecov.io/gh/YOUR_USERNAME/YOUR_REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/YOUR_REPO)
+
 Multi-user API для скачивания видео с ограничениями по качеству и квотам. Поддерживает YouTube, VK, GetCourse и другие платформы. Включает аутентификацию, email-верификацию, Stripe-биллинг и очередь задач.
 
 ## Быстрый старт (локально)

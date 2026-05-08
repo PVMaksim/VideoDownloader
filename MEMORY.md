@@ -1,30 +1,26 @@
-## Последняя сессия: 2026-05-07
+# MEMORY.md — VideoDownloader Backend
+
+## Последняя сессия: 2026-05-08
 ### Сделано
-- ✅ Исправлены интеграционные тесты: все 7 проходят (404 → 201 для /api/download)
-- ✅ Переведены модели на SQLAlchemy 2.0: `Mapped[T]` вместо `Column`
-- ✅ Исправлен `datetime.utcnow()` → `datetime.now(timezone.UTC)`
-- ✅ Настроены ruff + mypy: 0 ошибок, минимальные `# type: ignore`
-- ✅ Исправлен синтаксис: `# type: ignore` теперь только в конце строк
-- ✅ Добавлена функция `count_downloads_today()` в downloads/service.py
-- ✅ Настроен фильтр предупреждений в pytest.ini
+- Настроен GitHub Actions CI/CD (lint, test, docker build).
+- Исправлен Dockerfile: разделение на API и Worker (ffmpeg только в worker).
+- Добавлен `requirements.txt` для сборки Docker.
+- Фиксы типов в `auth/router.py` и `downloads/service.py` (mypy, union-attr).
+- Успешный запуск тестов (7 passed) и линтеров (ruff, mypy).
 
 ### Проблемы / Баги
-- [ ] Предупреждение FastAPI: `@app.on_event("startup")` устарел (отфильтровано, не критично)
-- [ ] Celery-воркер не подключён — задачи остаются в статусе `queued` (в тестах мокается)
+- [ ] Предупреждение FastAPI `@app.on_event` (deprecated) — отложено.
+- [ ] Celery Worker не подключен к реальному брокеру.
 
 ### Принятые решения
-- Использовать `str | None` вместо `Optional[str]` (современный синтаксис)
-- Моки для тестов вынесены в `conftest.py` + env-флаг `SKIP_EMAIL_VERIFICATION`
-- Фиктивные файлы для `/api/file/{id}` создаются в тестовом режиме (2048 байт)
+- Использовать `pyproject.toml` для зависимостей, но генерировать `requirements.txt` для Docker.
+- Моки для тестов в `conftest.py`.
 
-## Следующая сессия (завтра) 🗓️
-- [ ] Настроить GitHub Actions: CI-пайплайн (ruff → mypy → pytest)
-- [ ] Добавить `Dockerfile` + `docker-compose.yml` для продакшен-деплоя
-- [ ] Дописать README.md: примеры API-запросов, переменные окружения
-- [ ] Опционально: мигрировать с `@app.on_event` на `@asynccontextmanager lifespan`
+## Следующая сессия
+- [ ] Настройка реального Celery брокера (Redis).
+- [ ] Подключение реального видеопарсера в Worker.
+- [ ] Деплой на VPS.
 
 ## Известный технический долг
-- `src/worker/tasks.py`: Celery-код без типов (заглушка, отключён в тестах)
-- `src/auth/service.py`: возврат `User | None` требует проверок в роутерах (частично сделано)
-- `src/db/database.py`: `sessionmaker` для async — сложная типизация (игнорируется в mypy)
-
+- `src/worker/tasks.py`: заглушка, требует реализации.
+- Миграция на `lifespan` в FastAPI.
