@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Копируем зависимости
 COPY pyproject.toml ./
-RUN pip install uv && uv pip install --system -r pyproject.toml
+RUN pip install uv && pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY src/ src/
