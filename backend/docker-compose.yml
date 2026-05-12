@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     ports: ["8001:8000"]
     environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/videograb
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videograb
       - REDIS_URL=redis://redis:6379/0
       - SKIP_EMAIL_VERIFICATION=true
     volumes:
@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/videograb
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videograb
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - ./downloads:/app/downloads
