@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     APP_URL: str = "http://localhost:8010"
     SKIP_EMAIL_VERIFICATION: bool = False
     DISABLE_EMAIL_SENDING: bool = False
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://redis:6379/0"
 
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
 
     DATABASE_URL_SYNC: str = "sqlite:///./videograb.db"
 
