@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 COPY pyproject.toml ./
-RUN pip install uv && uv pip install --system -r pyproject.toml celery
+RUN pip install uv && uv pip install --system -r pyproject.toml
 
 COPY src/ src/
 COPY src/worker/ src/worker/
@@ -18,4 +18,5 @@ ENV PYTHONPATH=/app/src \
     DOWNLOAD_DIR=/app/downloads
     
 RUN uv pip install --system sqlalchemy asyncpg
+RUN uv pip install --system pydantic-settings celery redis
 CMD ["celery", "-A", "src.worker.tasks", "worker", "--loglevel=info"]
