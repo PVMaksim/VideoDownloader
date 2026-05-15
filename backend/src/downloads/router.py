@@ -1,3 +1,4 @@
+from src.worker.tasks import download_video
 """Download endpoints"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -66,6 +67,22 @@ async def create_download(
             title=req.title or "video",
             db=db,
         )
+    
+    # 🚀 ОТПРАВЛЯЕМ ЗАДАЧУ В CELERY
+    download_video.apply_async(
+        args=[
+            download.task_id,
+            download.video_url,
+            download.cookies or "",
+            download.referer or "",
+            download.user_agent or "",
+            download.height or 1080,
+            download.title or "video",
+            current_user.plan.value if hasattr(current_user, "plan") else "free",
+        ],
+        queue="celery"
+    )
+
     except ValueError as e:
         # Преобразуем бизнес-ошибки в HTTP 402 с кодом
         error_msg = str(e)
