@@ -1,6 +1,6 @@
 #!/bin/bash
 # health_check.sh — Проверка состояния всех сервисов VideoGrab
-# Запускать: ./scripts/health_check.sh
+# Запускать: ./scripts/api/health_check.sh
 # Возвращает 0 если всё ОК, 1 если есть проблемы
 
 set -e
@@ -13,8 +13,8 @@ echo "$(date)"
 echo ""
 
 # ── API ──────────────────────────────────────────────────────────
-echo -n "API /api/health ... "
-HTTP_CODE=$(curl -s -o /tmp/vg_health.json -w "%{http_code}" "$APP_URL/api/health" 2>/dev/null || echo "000")
+echo -n "API /api/api/health ... "
+HTTP_CODE=$(curl -s -o /tmp/vg_health.json -w "%{http_code}" "$APP_URL/api/api/health" 2>/dev/null || echo "000")
 if [ "$HTTP_CODE" = "200" ]; then
   STATUS=$(cat /tmp/vg_health.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "?")
   echo "✅ OK (status=$STATUS)"
