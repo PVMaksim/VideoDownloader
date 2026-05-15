@@ -10,7 +10,7 @@ from celery import Celery
 from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session
 
-from config import settings
+from src.celery_config import app
 from db.models import Download, DownloadStatus
 
 log = logging.getLogger(__name__)
