@@ -1,18 +1,25 @@
 {
   "manifest_version": 3,
   "name": "VideoGrab",
-  "version": "1.0.1",
-  "description": "Скачивай видео с GetCourse и других платформ",
-
+  "version": "1.0.2",
+  "description": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0439 \u0432\u0438\u0434\u0435\u043e \u0441 GetCourse \u0438 \u0434\u0440\u0443\u0433\u0438\u0445 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c",
   "permissions": [
-    "webRequest", "cookies", "storage", "notifications",
-    "activeTab", "tabs", "scripting", "alarms", "downloads"
+    "webRequest",
+    "cookies",
+    "storage",
+    "notifications",
+    "activeTab",
+    "tabs",
+    "scripting",
+    "alarms",
+    "downloads"
   ],
-
-  "host_permissions": ["<all_urls>"],
-
-  "background": { "service_worker": "background.js" },
-
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -21,18 +28,19 @@
       "128": "icons/icon128.png"
     }
   },
-
   "options_page": "options/options.html",
-
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start",
       "world": "ISOLATED"
     }
   ],
-
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

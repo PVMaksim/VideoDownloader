@@ -15,7 +15,7 @@ COPY src/ src/
 COPY src/worker/ src/worker/
 
 ENV PYTHONPATH=/app/src \
-    DOWNLOAD_DIR=/app/downloads \
-    DATABASE_URL=sqlite+aiosqlite:///./videograb.db
-
+    DOWNLOAD_DIR=/app/downloads
+    
+RUN uv pip install --system sqlalchemy asyncpg
 CMD ["celery", "-A", "src.worker.tasks", "worker", "--loglevel=info"]

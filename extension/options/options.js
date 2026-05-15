@@ -1,75 +1,43 @@
 // VideoGrab — Options v2 (auth)
 
-let backendUrl = "";
+const backendUrl = "http://194.87.146.178:8201";
 let token = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const s = await chrome.storage.local.get(["backendUrl", "token"]);
-  backendUrl = (s.backendUrl || "").replace(/\/$/, "");
+  const s = await chrome.storage.local.get(["token"]);
   token = s.token || "";
 
-  if (backendUrl) document.getElementById("backendUrl").value = backendUrl;
-
-  // Если есть токен — показываем профиль
-  if (token && backendUrl) await loadProfile();
+  if (token) await loadProfile();
   else showAuth();
 
-  // Сервер
-  document.getElementById("btnTest").addEventListener("click", testServer);
-  document.getElementById("backendUrl").addEventListener("change", async (e) => {
-    backendUrl = e.target.value.trim().replace(/\/$/, "");
-    await chrome.storage.local.set({ backendUrl });
-  });
-
-  // Auth
-  document.getElementById("btnLogin").addEventListener("click", login);
-  document.getElementById("btnRegister").addEventListener("click", register);
-  document.getElementById("btnLogout").addEventListener("click", logout);
-  document.getElementById("linkRegister").addEventListener("click", (e) => { e.preventDefault(); showRegister(); });
-  document.getElementById("linkLogin").addEventListener("click", (e) => { e.preventDefault(); showLogin(); });
+  // Auth buttons
+  document.getElementById("btnLogin")?.addEventListener("click", () => { console.log("[DEBUG] Кнопка нажата"); login(); });
+  document.getElementById("btnRegister")?.addEventListener("click", register);
+  document.getElementById("btnLogout")?.addEventListener("click", logout);
+  document.getElementById("linkRegister")?.addEventListener("click", (e) => { e.preventDefault(); showRegister(); });
+  document.getElementById("linkLogin")?.addEventListener("click", (e) => { e.preventDefault(); showLogin(); });
 
   // Enter в полях
   ["email","password","regEmail","regPassword"].forEach(id => {
     document.getElementById(id)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        if (id.startsWith("reg")) document.getElementById("btnRegister").click();
-        else document.getElementById("btnLogin").click();
+        if (id.startsWith("reg")) document.getElementById("btnRegister")?.click();
+        else document.getElementById("btnLogin")?.click();
       }
     });
   });
 });
 
-// ── Сервер ───────────────────────────────────────────────────────
-
-async function testServer() {
-  backendUrl = document.getElementById("backendUrl").value.trim().replace(/\/$/, "");
-  await chrome.storage.local.set({ backendUrl });
-  showStatus("serverStatus", "info", "Проверяю...");
-
-  try {
-    const res = await fetch(`${backendUrl}/api/health`);
-    if (res.ok) {
-      const d = await res.json();
-      showStatus("serverStatus", "ok", `✓ Сервер работает (v${d.version})`);
-    } else {
-      showStatus("serverStatus", "err", `Ошибка ${res.status}`);
-    }
-  } catch(e) {
-    showStatus("serverStatus", "err", `Не подключиться: ${e.message}`);
-  }
-}
-
 // ── Auth ─────────────────────────────────────────────────────────
 
-async function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+async function login() { console.log("[DEBUG] login() вызвана");
+  const email = document.getElementById("email")?.value.trim();
+  const password = document.getElementById("password")?.value;
   if (!email || !password) return showStatus("authStatus", "err", "Заполни все поля");
-  if (!backendUrl) return showStatus("authStatus", "err", "Сначала укажи URL сервера");
 
   showStatus("authStatus", "info", "Вхожу...");
   try {
-    const res = await fetch(`${backendUrl}/auth/login`, {
+    console.log("[LOGIN] Attempting...", { email: document.getElementById("loginEmail")?.value }); const res = await fetch(`${backendUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -91,14 +59,13 @@ async function login() {
 }
 
 async function register() {
-  const email = document.getElementById("regEmail").value.trim();
-  const password = document.getElementById("regPassword").value;
+  const email = document.getElementById("regEmail")?.value.trim();
+  const password = document.getElementById("regPassword")?.value;
   if (!email || !password) return showStatus("regStatus", "err", "Заполни все поля");
-  if (!backendUrl) return showStatus("regStatus", "err", "Сначала укажи URL сервера");
 
   showStatus("regStatus", "info", "Регистрирую...");
   try {
-    const res = await fetch(`${backendUrl}/auth/register`, {
+    const res = await fetch(`${backendUrl}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -127,12 +94,11 @@ async function logout() {
 
 async function loadProfile() {
   try {
-    const res = await fetch(`${backendUrl}/auth/me`, {
+    const res = await fetch(`${backendUrl}/api/auth/me`, {
       headers: { "Authorization": `Bearer ${token}` },
     });
 
     if (!res.ok) {
-      // Токен невалиден
       token = "";
       await chrome.storage.local.remove("token");
       return showAuth();
@@ -187,6 +153,35 @@ function showRegister() {
 
 function showStatus(id, type, msg) {
   const el = document.getElementById(id);
-  el.className = "status " + type;
-  el.textContent = msg;
+  if (el) {
+    el.className = "status " + type;
+    el.textContent = msg;
+  }
 }
+
+    // Toggle Password Visibility
+    window.togglePassword = (inputEl) => {
+        if(inputEl) inputEl.type = inputEl.type === 'password' ? 'text' : 'password';
+    }
+    
+    // Add Eye Buttons to all password fields
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('input[type="password"]').forEach(el => {
+            if(el.dataset.eyeAdded) return;
+            el.dataset.eyeAdded = "true";
+            
+            const wrap = document.createElement('div');
+            wrap.style.position = 'relative';
+            wrap.style.width = '100%';
+            el.parentNode.insertBefore(wrap, el);
+            wrap.appendChild(el);
+            el.style.paddingRight = '35px';
+            
+            const eye = document.createElement('span');
+            eye.textContent = '👁';
+            eye.style.cssText = 'position:absolute;right:10px;top:12px;cursor:pointer;opacity:0.7;font-size:18px;z-index:10;user-select:none;';
+            eye.onclick = () => window.togglePassword(el);
+            wrap.appendChild(eye);
+        });
+    });
+    

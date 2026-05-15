@@ -1,4 +1,6 @@
+let selectedHeight = 1080;
 // VideoGrab — Popup v1.0 (JWT auth)
+
 
 const QUALITIES = [
   { label: "360p",  height: 360,  sub: "360p" },
@@ -15,12 +17,11 @@ const PLATFORM_LABELS = {
 const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls"]);
 const PAGE_PLATFORMS = new Set(["youtube", "instagram", "vk"]);
 
-let backendUrl = "";
+const backendUrl = "http://194.87.146.178:8201";
 let token = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const s = await chrome.storage.local.get(["backendUrl", "token"]);
-  backendUrl = (s.backendUrl || "").replace(/\/$/, "");
+  const s = await chrome.storage.local.get(["token"]);
   token = s.token || "";
 
   updateFooter();
@@ -88,7 +89,7 @@ function buildCard(video) {
   const platform = PLATFORM_LABELS[video.type] || "Видео";
   const title = cleanTitle(video.pageTitle);
   const isHls = HLS_PLATFORMS.has(video.type);
-  let selectedHeight = 1080;
+  
 
   const qualityBlock = isHls ? `
     <div class="qlabel">Качество</div>
@@ -150,7 +151,6 @@ function buildCard(video) {
   }
 
   card.querySelector(".btn-dl").addEventListener("click", () => {
-    if (!backendUrl || !token) { chrome.runtime.openOptionsPage(); return; }
     startDownload(video, PAGE_PLATFORMS.has(video.type) ? null : selectedHeight, card);
   });
 
@@ -185,8 +185,9 @@ async function startDownload(video, height, card) {
       user_agent: navigator.userAgent,
       title: cleanTitle(video.pageTitle),
     };
-    if (height) body.height = height;
+    body.height = selectedHeight || 1080;
 
+        if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
     const res = await fetch(`${backendUrl}/api/download`, {
       method: "POST",
       headers: {
@@ -197,7 +198,7 @@ async function startDownload(video, height, card) {
     });
 
     if (res.status === 402) {
-      const data = await res.json();
+      const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);
       throw new Error(data.detail?.message || "Лимит исчерпан");
     }
     if (res.status === 401 || res.status === 403) {
@@ -213,12 +214,50 @@ async function startDownload(video, height, card) {
     pt.textContent = "Скачивается на сервере...";
 
     await pollStatus(task_id, pb, pt, pp);
+    console.log("[DEBUG] Polling finished! Server says file is ready.");
+    
+    try {
+        const fileUrl = `${backendUrl}/api/file/${task_id}`;
+        console.log("[DEBUG] Attempting to fetch file from:", fileUrl);
+        
+        const fileRes = await fetch(fileUrl, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        console.log("[DEBUG] Server responded with status:", fileRes.status);
+        
+        if (!fileRes.ok) {
+            const errText = await fileRes.text();
+            throw new Error(`Server Error ${fileRes.status}: ${errText}`);
+        }
 
-    chrome.downloads.download({
-      url: `${backendUrl}/api/file/${task_id}`,
-      headers: [{ name: "Authorization", value: `Bearer ${token}` }],
-      saveAs: true,
+        const blob = await fileRes.blob();
+        console.log("[DEBUG] File downloaded to memory. Size:", blob.size, "bytes");
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `video_${task_id}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        console.log("[DEBUG] Save dialog triggered successfully.");
+    } catch (err) {
+        console.error("[ERROR] Download process failed:", err);
+        throw new Error("Не удалось скачать файл на устройство: " + err.message);
+    } console.log("[DEBUG] Polling завершён, начинаю скачивание на Mac...");
+
+    const fileRes = await fetch(`${backendUrl}/api/file/${task_id}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    if (!fileRes.ok) throw new Error("Ошибка скачивания файла");
+    const blob = await fileRes.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `video_${task_id}.mp4`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
 
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
@@ -250,11 +289,11 @@ async function pollStatus(taskId, pb, pt, pp) {
         const res = await fetch(`${backendUrl}/api/status/${taskId}`, {
           headers: { "Authorization": `Bearer ${token}` },
         });
-        const data = await res.json();
+        const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
         pp.textContent = pct + "%";
-        if (data.status === "ready") {
+        if (["ready", "completed", "success"].includes(data.status)) {
           clearInterval(iv); pb.style.width = "100%"; resolve();
         } else if (data.status === "error") {
           clearInterval(iv); reject(new Error(data.error || "Ошибка сервера"));
@@ -281,3 +320,18 @@ function cleanTitle(t) {
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+
+
+// Обработчик выбора качества
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.qbtn');
+    if (btn) {
+        selectedHeight = parseInt(btn.dataset.height) || 1080;
+        const card = btn.closest('.card');
+        if (card) {
+            card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
+        }
+        btn.classList.add('active');
+        console.log("[QUALITY] Выбрано качество:", selectedHeight);
+    }
+});
