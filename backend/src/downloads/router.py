@@ -9,11 +9,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.dependencies import get_current_user
-from src.database import get_db
-from src.models import Download, DownloadStatus, Plan, User
-from schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
-from worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
+from ..auth.dependencies import get_current_user
+from ..database import get_db
+from ..models import Download, DownloadStatus, Plan, User
+from ..schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
+from ..worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
 
 from .service import (
     check_daily_limit,
