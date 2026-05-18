@@ -9,11 +9,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.dependencies import get_current_user
-from database import get_db
-from models import Download, DownloadStatus, Plan, User
-from schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
-from worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
+from src.auth.dependencies import get_current_user
+from src.database import get_db
+from src.models import Download, DownloadStatus, Plan, User
+from src.schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
+from src.worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
 
 from .service import (
     check_daily_limit,
@@ -74,9 +74,7 @@ async def create_download(
         )
     
     # 3. Возвращаем ответ (снаружи try/except)
-    # 🚀 Dispatch Celery task
-        download_video.apply_async(args=[download.task_id, download.video_url, download.cookies or '', download.referer or '', download.user_agent or '', download.height or 1080, download.title or 'video', current_user.plan.value if hasattr(current_user, 'plan') else 'free'], queue='celery')
-        return DownloadResponse(task_id=download.task_id, status=download.status)
+    return DownloadResponse(task_id=download.task_id, status=download.status)
 
 
 @router.get("/status/{task_id}", response_model=StatusResponse)
