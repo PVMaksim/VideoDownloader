@@ -74,7 +74,9 @@ async def create_download(
         )
     
     # 3. Возвращаем ответ (снаружи try/except)
-    return DownloadResponse(task_id=download.task_id, status=download.status)
+    # 🚀 Dispatch Celery task
+        download_video.apply_async(args=[download.task_id, download.video_url, download.cookies or '', download.referer or '', download.user_agent or '', download.height or 1080, download.title or 'video', current_user.plan.value if hasattr(current_user, 'plan') else 'free'], queue='celery')
+        return DownloadResponse(task_id=download.task_id, status=download.status)
 
 
 @router.get("/status/{task_id}", response_model=StatusResponse)
