@@ -1,6 +1,7 @@
 """
 Celery tasks — background video downloading
 """
+from config import settings
 import logging
 import re
 import shutil
@@ -10,14 +11,14 @@ from celery import Celery
 from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session
 
-from src.celery_config import app
+from celery_config import app
 from db.models import Download, DownloadStatus
 
 log = logging.getLogger(__name__)
 
 # Celery app
 celery = Celery(
-    "videograb",
+    "videodownloader",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
 )

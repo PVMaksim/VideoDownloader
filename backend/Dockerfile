@@ -14,6 +14,8 @@ COPY requirements.txt ./
 RUN pip install uv && pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
+COPY alembic.ini ./alembic.ini
+COPY alembic/ alembic/
 COPY src/ src/
 COPY tests/ tests/
 COPY pytest.ini ruff.toml mypy.ini ./

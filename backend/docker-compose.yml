@@ -6,10 +6,11 @@ services:
       dockerfile: Dockerfile
     ports: ["8201:8000"]
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videograb
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videodownloader
       - REDIS_URL=redis://redis:6379/0
       - SKIP_EMAIL_VERIFICATION=true
     volumes:
+      - ./src:/app/src
       - ./downloads:/app/downloads
     depends_on: [db, redis]
     healthcheck:
@@ -23,9 +24,10 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videograb
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videodownloader
       - REDIS_URL=redis://redis:6379/0
     volumes:
+      - ./src:/app/src
       - ./downloads:/app/downloads
     depends_on: [api, redis]
 
@@ -34,7 +36,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
-      POSTGRES_DB: videograb
+      POSTGRES_DB: videodownloader
     volumes: [pgdata:/var/lib/postgresql/data]
 
   redis:

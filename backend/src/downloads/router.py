@@ -10,8 +10,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.service import get_current_user
-from database import get_db
-from models import Download, DownloadStatus, Plan, User
+from db.database import get_db
+from db.models import Download, DownloadStatus, Plan, User
 from schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
 from worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
 

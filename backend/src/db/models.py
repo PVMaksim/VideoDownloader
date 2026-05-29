@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -20,6 +20,8 @@ class Plan(enum.StrEnum):
     BUSINESS = "business"
 
 class User(Base):
+    reset_token: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    reset_token_expires: Mapped[datetime | None] = mapped_column(nullable=True)
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
