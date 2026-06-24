@@ -144,7 +144,7 @@
         const email = this.shadowRoot.getElementById('loginEmail').value;
         const pass = this.shadowRoot.getElementById('loginPassword').value;
         try {
-          const r = await fetch(`${this.api}/api/auth/login`, {
+          const r = await fetch(`${this.api}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ username: email, password: pass })
@@ -162,7 +162,7 @@
         const email = this.shadowRoot.getElementById('registerEmail').value;
         const pass = this.shadowRoot.getElementById('registerPassword').value;
         try {
-          const r = await fetch(`${this.api}/api/auth/register`, {
+          const r = await fetch(`${this.api}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password: pass })
