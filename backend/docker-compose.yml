@@ -1,14 +1,19 @@
-
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    ports: ["8201:8000"]
+    ports: ["8301:8000"]
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videodownloader
+      - DATABASE_URL=${DATABASE_URL}
+      - SKIP_AUTH=${SKIP_AUTH:-false}
       - REDIS_URL=redis://redis:6379/0
-      - SKIP_EMAIL_VERIFICATION=true
+      - SKIP_EMAIL_VERIFICATION=${SKIP_EMAIL_VERIFICATION:-false}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-prod}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - APP_URL=${APP_URL:-http://193.242.109.48:8301}
     volumes:
       - ./src:/app/src
       - ./downloads:/app/downloads
@@ -23,20 +28,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/videodownloader
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - ./src:/app/src
       - ./downloads:/app/downloads
     depends_on: [api, redis]
+    command: ["sh", "-c", "pip install psycopg2-binary && exec celery -A src.worker.tasks worker --loglevel=info"]
 
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: videodownloader
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: ${POSTGRES_DB:-videodownloader}
     volumes: [pgdata:/var/lib/postgresql/data]
 
   redis:
