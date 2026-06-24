@@ -25,7 +25,7 @@ jobs:
           echo "$SSH_KEY" > /tmp/key
           chmod 600 /tmp/key
           
-          ssh -i /tmp/key -o StrictHostKeyChecking=no ru_server@$VPS_HOST "
+          ssh -i /tmp/key -o StrictHostKeyChecking=no deploy@$VPS_HOST "
             set -e
             cd /home/deploy/VideoDownloader/backend
             
