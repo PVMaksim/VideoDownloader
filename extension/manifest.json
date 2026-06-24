@@ -15,7 +15,11 @@
     "downloads"
   ],
   "host_permissions": [
-    "<all_urls>"
+   "http://193.242.109.48:8301/*",
+  "http://localhost:8000/*",
+  "<all_urls>",
+  "http://localhost:8201/*",
+  "http://127.0.0.1:8201/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -45,5 +49,19 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/*.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+
+ "content_security_policy": {
+   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://193.242.109.48:8301 https://neoxis.store"
+ }
 }

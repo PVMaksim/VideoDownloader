@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auth Component</title>
+</head>
+<body>
+  <template id="auth-tmpl">
+    <style>
+      :host {
+        display: block;
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+        background: #0f111a;
+        border-radius: 12px;
+        color: #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      }
+      h2 {
+        text-align: center;
+        margin: 0 0 1.5rem 0;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .msg {
+        padding: 0.6rem;
+        margin-bottom: 1rem;
+        border-radius: 6px;
+        display: none;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+      .msg.show { display: block; }
+      .msg.error { background: #2a1215; color: #fca5a5; border: 1px solid #7f1d1d; }
+      .msg.success { background: #142814; color: #86efac; border: 1px solid #166534; }
+
+      .tabs { display: flex; border-bottom: 1px solid #334155; margin-bottom: 1.5rem; }
+      .tab {
+        padding: 0.6rem 1.2rem;
+        cursor: pointer;
+        color: #94a3b8;
+        font-weight: 500;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+        user-select: none;
+      }
+      .tab:hover { color: #cbd5e1; }
+      .tab.active {
+        color: #818cf8;
+        border-bottom-color: #818cf8;
+        font-weight: 600;
+      }
+
+      .form { display: none; flex-direction: column; gap: 1rem; }
+      .form.active { display: flex; }
+
+      input {
+        padding: 0.7rem;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: #f8fafc;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+      }
+      input:focus { outline: none; border-color: #818cf8; }
+
+      button {
+        padding: 0.75rem;
+        background: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover { background: #4f46e5; }
+    </style>
+
+    <h2>Регистрация</h2>
+    <div class="msg" id="msg"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="login">Вход</div>
+      <div class="tab" data-tab="register">Регистрация</div>
+    </div>
+
+    <form class="form active" id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email" />
+      <input type="password" id="loginPassword" placeholder="Пароль" required autocomplete="current-password" />
+      <button type="submit">Войти</button>
+    </form>
+
+    <form class="form" id="registerForm">
+      <input type="email" id="registerEmail" placeholder="Email" required autocomplete="email" />
+      <input type="password" id="registerPassword" placeholder="Пароль (мин. 6)" minlength="6" required autocomplete="new-password" />
+      <button type="submit">Создать аккаунт</button>
+    </form>
+  </template>
+
+  <script>
+    class AuthForm extends HTMLElement {
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      
+      connectedCallback() {
+        this.shadowRoot.appendChild(document.getElementById('auth-tmpl').content.cloneNode(true));
+        this.api = this.getAttribute('api-url') || 'http://localhost:8000';
+        this.bindEvents();
+      }
+
+      bindEvents() {
+        const sr = this.shadowRoot;
+        sr.querySelectorAll('.tab').forEach(t => 
+          t.addEventListener('click', e => this.switchTab(e.target.dataset.tab))
+        );
+        sr.getElementById('loginForm').addEventListener('submit', e => this.handleLogin(e));
+        sr.getElementById('registerForm').addEventListener('submit', e => this.handleRegister(e));
+      }
+
+      switchTab(tab) {
+        const sr = this.shadowRoot;
+        sr.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        sr.querySelectorAll('.form').forEach(f => f.classList.toggle('active', f.id === tab + 'Form'));
+        this.hideMsg();
+      }
+
+      showMsg(text, type) {
+        const m = this.shadowRoot.getElementById('msg');
+        m.textContent = text;
+        m.className = `msg show ${type}`;
+        setTimeout(() => this.hideMsg(), 4000);
+      }
+
+      hideMsg() { this.shadowRoot.getElementById('msg').classList.remove('show'); }
+
+      async handleLogin(e) {
+        e.preventDefault();
+        const email = this.shadowRoot.getElementById('loginEmail').value;
+        const pass = this.shadowRoot.getElementById('loginPassword').value;
+        try {
+          const r = await fetch(`${this.api}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ username: email, password: pass })
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail);
+          localStorage.setItem('token', d.access_token);
+          this.showMsg('✅ Успешный вход!', 'success');
+          this.dispatchEvent(new CustomEvent('auth-login', { detail: { token: d.access_token } }));
+        } catch (err) { this.showMsg(err.message, 'error'); }
+      }
+
+      async handleRegister(e) {
+        e.preventDefault();
+        const email = this.shadowRoot.getElementById('registerEmail').value;
+        const pass = this.shadowRoot.getElementById('registerPassword').value;
+        try {
+          const r = await fetch(`${this.api}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass })
+          });
+          const d = await r.json();
+          if (!r.ok) {
+            if (r.status === 409) {
+              this.showMsg('⚠️ Email уже занят. Попробуйте войти.', 'error');
+            } else { throw new Error(d.detail); }
+            return;
+          }
+          this.showMsg('✅ Аккаунт создан! Войдите.', 'success');
+          setTimeout(() => this.switchTab('login'), 1500);
+          this.dispatchEvent(new CustomEvent('auth-register', { detail: d }));
+        } catch (err) { this.showMsg(err.message, 'error'); }
+      }
+    }
+    customElements.define('auth-form', AuthForm);
+  </script>
+</body>
+</html>

@@ -17,7 +17,7 @@ const PLATFORM_LABELS = {
 const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls"]);
 const PAGE_PLATFORMS = new Set(["youtube", "instagram", "vk"]);
 
-const backendUrl = "http://194.87.146.178:8201";
+const backendUrl = "http://193.242.109.48:8301";
 let token = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -179,16 +179,19 @@ async function startDownload(video, height, card) {
     const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
 
     const body = {
-      video_url: video.url,
-      cookies: cookieStr,
-      referer: tab.url,
-      user_agent: navigator.userAgent,
-      title: cleanTitle(video.pageTitle),
+      req: {
+        video_url: video.url,
+        cookies: cookieStr,
+        referer: tab.url,
+        user_agent: navigator.userAgent,
+        height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
+        format: "best",
+      },
+    },
     };
-    body.height = selectedHeight || 1080;
 
         if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
-    const res = await fetch(`${backendUrl}/api/download`, {
+    const res = await fetch(`${backendUrl}/downloads`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -217,7 +220,7 @@ async function startDownload(video, height, card) {
     console.log("[DEBUG] Polling finished! Server says file is ready.");
     
     try {
-        const fileUrl = `${backendUrl}/api/file/${task_id}`;
+        const fileUrl = `${backendUrl}/downloads/file/${task_id}`;
         console.log("[DEBUG] Attempting to fetch file from:", fileUrl);
         
         const fileRes = await fetch(fileUrl, {
@@ -248,7 +251,7 @@ async function startDownload(video, height, card) {
         throw new Error("Не удалось скачать файл на устройство: " + err.message);
     } console.log("[DEBUG] Polling завершён, начинаю скачивание на Mac...");
 
-    const fileRes = await fetch(`${backendUrl}/api/file/${task_id}`, {
+    const fileRes = await fetch(`${backendUrl}/downloads/file/${task_id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!fileRes.ok) throw new Error("Ошибка скачивания файла");
@@ -286,7 +289,7 @@ async function pollStatus(taskId, pb, pt, pp) {
   return new Promise((resolve, reject) => {
     const iv = setInterval(async () => {
       try {
-        const res = await fetch(`${backendUrl}/api/status/${taskId}`, {
+        const res = await fetch(`${backendUrl}/downloads/status/${taskId}`, {
           headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);

@@ -1,0 +1,66 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const authSection = document.getElementById('authSection');
+  const profileSection = document.getElementById('profileSection');
+  const profileEmail = document.getElementById('profileEmail');
+  const avatarLetter = document.getElementById('avatarLetter');
+  const btnLogout = document.getElementById('btnLogout');
+
+  // Проверка токена при загрузке
+  const token = localStorage.getItem('token');
+  if (token) {
+    fetch('http://193.242.109.48:8301/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(user => {
+      showProfile(user);
+    })
+    .catch(() => {
+      localStorage.removeItem('token');
+      showAuth();
+    });
+  } else {
+    showAuth();
+  }
+
+  // Слушаем вход через компонент
+  document.addEventListener('auth-login', (e) => {
+    const { token } = e.detail;
+    localStorage.setItem('token', token);
+    
+    fetch('http://193.242.109.48:8301/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(user => {
+      showProfile(user);
+    });
+  });
+
+  // Слушаем регистрацию через компонент
+  document.addEventListener('auth-register', (e) => {
+    console.log('✅ Регистрация:', e.detail);
+    // Компонент сам переключится на вкладку "Вход"
+  });
+
+  // Выход
+  btnLogout?.addEventListener('click', () => {
+    localStorage.removeItem('token');
+    showAuth();
+  });
+
+  function showProfile(user) {
+    authSection?.classList.add('hidden');
+    profileSection?.classList.remove('hidden');
+    profileEmail.textContent = user.email;
+    
+    // Первая буква email для аватара
+    const first = (user.email[0] || 'U').toUpperCase();
+    avatarLetter.textContent = first;
+  }
+
+  function showAuth() {
+    profileSection?.classList.add('hidden');
+    authSection?.classList.remove('hidden');
+  }
+});
