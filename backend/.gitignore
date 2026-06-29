@@ -15,3 +15,10 @@ __pycache__/
 *.pyc
 backend/downloads/*.mp4
 backend/downloads/
+
+# Temporary files
+[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*
+*.db
+data.db
+test_*.mp4
+downloads/
