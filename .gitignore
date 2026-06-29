@@ -34,3 +34,13 @@ extension/build/
 *.zip
 backend/downloads/*.mp4
 backend/downloads/downloads/
+
+# UUID файлы (временные)
+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+
+# База данных
+*.db
+data.db
+
+# Тестовые видео
+test_*.mp4
