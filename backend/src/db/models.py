@@ -54,6 +54,9 @@ class Download(Base):
     progress: Mapped[int] = mapped_column(Integer, default=0)
 
     video_url: Mapped[str] = mapped_column(Text, nullable=False)
+    cookies: Mapped[str | None] = mapped_column(Text, nullable=True, default="")
+    referer: Mapped[str | None] = mapped_column(Text, nullable=True, default="")
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True, default="")
     title: Mapped[str | None] = mapped_column(String(500))
     filename: Mapped[str | None] = mapped_column(String(500))
     height: Mapped[int | None] = mapped_column(Integer)

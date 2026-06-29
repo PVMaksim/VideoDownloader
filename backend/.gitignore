@@ -13,3 +13,4 @@ bandit-report.json
 .ruff_cache/
 __pycache__/
 *.pyc
+.mp4

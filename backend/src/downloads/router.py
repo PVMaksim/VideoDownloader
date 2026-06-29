@@ -41,29 +41,13 @@ async def create_download(
         download = await create_download_record(
             user=current_user,
             video_url=req.video_url,
-            cookies=req.cookies or "",
-            referer=req.referer or "",
-            user_agent=req.user_agent or "",
-            height=req.height or 1080,
-            title=req.title or "video",
+            cookies=getattr(req, "cookies", None) or "",
+            referer=getattr(req, "referer", None) or "",
+            user_agent=getattr(req, "user_agent", None) or "",
+            height=getattr(req, "height", None) or 1080,
+            title=getattr(req, "title", None) or "video",
             db=db,
         )
-        
-        # 2. 🚀 ОТПРАВЛЯЕМ ЗАДАЧУ В CELERY
-        download_video.apply_async(
-            args=[
-                download.task_id,
-                download.video_url,
-                download.cookies or "",
-                download.referer or "",
-                download.user_agent or "",
-                download.height or 1080,
-                download.title or "video",
-                current_user.plan.value if hasattr(current_user, "plan") else "free",
-            ],
-            queue="celery"
-        )
-        
     except ValueError as e:
         # Бизнес-ошибки → HTTP 402
         error_msg = str(e)
@@ -73,10 +57,23 @@ async def create_download(
             detail={"code": code, "message": error_msg}
         )
     
-    # 3. Возвращаем ответ (снаружи try/except)
-    # 🚀 Dispatch Celery task
-        download_video.apply_async(args=[download.task_id, download.video_url, download.cookies or '', download.referer or '', download.user_agent or '', download.height or 1080, download.title or 'video', current_user.plan.value if hasattr(current_user, 'plan') else 'free'], queue='celery')
-        return DownloadResponse(task_id=download.task_id, status=download.status)
+    # 2. 🚀 Отправляем задачу в Celery
+    download_video.apply_async(
+        args=[
+            download.task_id,
+            download.video_url,
+            download.cookies or "",
+            download.referer or "",
+            download.user_agent or "",
+            download.height or 1080,
+            download.title or "video",
+            current_user.plan.value if hasattr(current_user, "plan") else "free",
+        ],
+        queue="celery"
+    )
+    
+    # 3. Возвращаем ответ
+    return DownloadResponse(task_id=download.task_id, status=download.status, video_url=download.video_url, height=download.height)
 
 
 @router.get("/status/{task_id}", response_model=StatusResponse)
@@ -120,11 +117,10 @@ async def history(
     return [
         HistoryItem(
             task_id=d.task_id,
+            filename=d.filename,
             status=d.status,
-            title=d.title,
-            platform=d.platform,
-            height=d.height,
-            created_at=d.created_at.isoformat(),
+            video_url=d.video_url,
+            created_at=d.created_at,
         )
         for d in downloads
     ]

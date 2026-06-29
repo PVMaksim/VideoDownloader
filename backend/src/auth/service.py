@@ -33,9 +33,43 @@ def decode_token(token: str) -> int | None:
         return None
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
+    # 🔧 Dev: skip auth if SKIP_AUTH=true
+    if getattr(settings, "SKIP_AUTH", False):
+        from db.models import User as UserModel
+        # 🔧 Dev: ensure mock user exists in DB
+        from sqlalchemy import select
+        mock_user = await db.execute(select(UserModel).where(UserModel.id == 1))
+        mock_user = mock_user.scalar_one_or_none()
+        if not mock_user:
+            mock_user = UserModel(
+                email="dev@test.local", password_hash="", 
+                is_active=True, is_verified=True, plan=Plan.PRO
+            )
+            db.add(mock_user)
+            await db.commit()
+            await db.refresh(mock_user)
+        return mock_user
+    # Если SKIP_AUTH=false — требуем токен
+    if not credentials:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Требуется токен")
+        from db.models import User as UserModel
+        # 🔧 Dev: ensure mock user exists in DB
+        from sqlalchemy import select
+        mock_user = await db.execute(select(UserModel).where(UserModel.id == 1))
+        mock_user = mock_user.scalar_one_or_none()
+        if not mock_user:
+            mock_user = UserModel(
+                email="dev@test.local", password_hash="", 
+                is_active=True, is_verified=True, plan=Plan.PRO
+            )
+            db.add(mock_user)
+            await db.commit()
+            await db.refresh(mock_user)
+        return mock_user
     user_id = decode_token(credentials.credentials)
     if not user_id:
         raise HTTPException(status_code=401, detail="Неверный или истёкший токен")

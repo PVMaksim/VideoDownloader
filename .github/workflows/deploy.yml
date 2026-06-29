@@ -24,6 +24,12 @@ jobs:
         run: |
           echo "$SSH_KEY" > /tmp/key
           chmod 600 /tmp/key
+
+          # Отладка: показываем тип ключа
+          echo "🔍 Key type:"
+          head -n 1 /tmp/key
+          echo "🔍 Key fingerprint:"
+          ssh-keygen -lf /tmp/key || echo "❌ Invalid key"
           
           ssh -i /tmp/key -o StrictHostKeyChecking=no deploy@$VPS_HOST "
             set -e

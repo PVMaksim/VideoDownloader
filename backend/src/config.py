@@ -2,14 +2,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    APP_URL: str = "http://localhost:8010"
+    APP_URL: str = "https://neoxis.store"
     SKIP_EMAIL_VERIFICATION: bool = False
+    SKIP_QUOTA_CHECK: bool = False
     DISABLE_EMAIL_SENDING: bool = False
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
 
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
 
-    DATABASE_URL_SYNC: str = "sqlite:///./videodownloader.db"
+    DATABASE_URL_SYNC: str = "postgresql+psycopg2://user:pass@db:5432/videodownloader"
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
 
 
     # Password reset
-    FRONTEND_URL: str = "http://localhost:8010"
+    FRONTEND_URL: str = "https://neoxis.store"
     
     # SMTP settings (optional)
     SMTP_HOST: str | None = None
@@ -50,4 +51,5 @@ class Settings(BaseSettings):
     SMTP_PASS: str | None = None
     SMTP_FROM: str = "noreply@videodownloader.app"
 
+    SKIP_AUTH: bool = False
 settings = Settings()

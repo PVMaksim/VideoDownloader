@@ -70,7 +70,7 @@ def download_video(
 
         except Exception as e:
             log.error(f"[{task_id}] Ошибка: {e}")
-            _set_status(db, task_id, DownloadStatus.ERROR, error=str(e))
+            _set_status(db, task_id, DownloadStatus.ERROR, error_message=str(e))
             # Удаляем незаконченные файлы
             shutil.rmtree(Path(settings.DOWNLOAD_DIR) / task_id, ignore_errors=True)
             raise self.retry(exc=e)

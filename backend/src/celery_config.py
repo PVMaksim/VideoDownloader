@@ -8,7 +8,7 @@ app = Celery(
     "videodownloader",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["src.worker.tasks"]
+    include=["worker.tasks"]
 )
 
 # Надёжные настройки для Docker

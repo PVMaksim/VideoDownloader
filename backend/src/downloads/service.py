@@ -31,6 +31,8 @@ def validate_resolution_for_plan(height: int, plan: str) -> tuple[bool, str | No
     return True, None
 
 async def check_daily_limit(user: User, db: AsyncSession) -> tuple[bool, str | None]:
+    if getattr(settings, "SKIP_QUOTA_CHECK", False):
+        return True, None
     if user.plan in (Plan.PRO, Plan.BUSINESS):
         return True, None
     today = datetime.now(UTC).date()
@@ -62,7 +64,8 @@ async def create_download_record(
         download = Download(
             task_id=str(uuid.uuid4()), user_id=user.id, video_url=video_url, title=title,
             platform=detect_platform(video_url), height=height, status=DownloadStatus.QUEUED, progress=0,
-            filename=f"{title}_{uuid.uuid4().hex[:8]}.mp4"
+            filename=f"{title}_{uuid.uuid4().hex[:8]}.mp4",
+            cookies=cookies, referer=referer, user_agent=user_agent
         )
         db.add(download)
         await db.commit()

@@ -4,6 +4,7 @@ from datetime import datetime
 
 class DownloadRequest(BaseModel):
     video_url: str
+    height: int | None = None
     cookies: Optional[str] = None
     referer: Optional[str] = None
     user_agent: Optional[str] = None
@@ -17,10 +18,10 @@ class DownloadResponse(BaseModel):
 
 class HistoryItem(BaseModel):
     task_id: str
-    filename: str
+    filename: str | None = None
     status: str
     created_at: datetime
-    url: str
+    video_url: str | None = None
 
 class StatusResponse(BaseModel):
     task_id: str

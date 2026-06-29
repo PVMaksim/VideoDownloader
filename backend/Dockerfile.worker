@@ -17,6 +17,6 @@ COPY src/worker/ src/worker/
 ENV PYTHONPATH=/app/src \
     DOWNLOAD_DIR=/app/downloads
     
-RUN uv pip install --system sqlalchemy asyncpg
+RUN uv pip install --system sqlalchemy asyncpg psycopg2-binary psycopg2-binary
 RUN uv pip install --system pydantic-settings celery redis
 CMD ["celery", "-A", "src.worker.tasks", "worker", "--loglevel=info"]
