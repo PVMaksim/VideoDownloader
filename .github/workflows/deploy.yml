@@ -10,74 +10,75 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to VPS
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      - name: Setup SSH key
         run: |
           echo "$SSH_KEY" > /tmp/key
           chmod 600 /tmp/key
-
-          # Отладка: показываем тип ключа
           echo "🔍 Key type:"
           head -n 1 /tmp/key
-          echo "🔍 Key fingerprint:"
           ssh-keygen -lf /tmp/key || echo "❌ Invalid key"
-          
-          ssh -i /tmp/key -o StrictHostKeyChecking=no deploy@$VPS_HOST "
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Git pull on server
+        run: |
+          ssh -i /tmp/key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 deploy@$VPS_HOST "
             set -e
-            cd /home/deploy/VideoDownloader/backend
-            
+            cd /home/deploy/VideoDownloader
             git fetch origin main
             git reset --hard origin/main
-            
-            if [ ! -f .env ]; then
-              echo 'POSTGRES_USER=user' > .env
-              echo \"POSTGRES_PASSWORD='${DB_PASSWORD}'\" >> .env
-              echo 'POSTGRES_DB=videodownloader' >> .env
-              echo \"DATABASE_URL='postgresql+asyncpg://user:${DB_PASSWORD}@db:5432/videodownloader'\" >> .env
-              echo \"DATABASE_URL_SYNC='postgresql://user:${DB_PASSWORD}@db:5432/videodownloader'\" >> .env
-              echo \"SECRET_KEY='${SECRET_KEY}'\" >> .env
-              echo 'SKIP_AUTH=false' >> .env
-              echo 'SKIP_EMAIL_VERIFICATION=false' >> .env
-              echo 'APP_URL=http://193.242.109.48:8301' >> .env
-            fi
-            
-            echo 'Building containers...'
+            echo '✅ Git updated'
+          "
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+
+      - name: Build containers
+        run: |
+          ssh -i /tmp/key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 deploy@$VPS_HOST "
+            set -e
+            cd /home/deploy/VideoDownloader/backend
             docker compose build --no-cache api worker
-            
-            echo 'Starting services...'
+            echo '✅ Build complete'
+          "
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+
+      - name: Start services
+        run: |
+          ssh -i /tmp/key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 deploy@$VPS_HOST "
+            set -e
+            cd /home/deploy/VideoDownloader/backend
             docker compose up -d --force-recreate api worker
-            
-            echo 'Waiting for API to start...'
+            echo '✅ Services started'
+          "
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+
+      - name: Health check
+        run: |
+          ssh -i /tmp/key -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=5 deploy@$VPS_HOST "
+            set -e
+            echo 'Waiting 20s for startup...'
             sleep 20
-            
-            echo 'Checking container status...'
-            docker compose ps api
-            
-            echo 'Checking API logs...'
-            docker compose logs --tail=50 api || true
-            
-            echo 'Health check with retries...'
             for i in 1 2 3 4 5; do
               if curl -sf http://localhost:8301/api/health; then
-                echo 'API is healthy!'
+                echo '✅ API is healthy!'
                 exit 0
               fi
               echo \"Attempt \$i failed, waiting 5s...\"
               sleep 5
             done
-            
-            echo 'Health check failed after 5 attempts'
-            docker compose logs api
+            docker compose -f /home/deploy/VideoDownloader/backend/docker-compose.yml logs --tail=30 api
             exit 1
           "
-          
-          rm -f /tmp/key# Trigger deployment Mon Jun 29 11:09:28 MSK 2026
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
