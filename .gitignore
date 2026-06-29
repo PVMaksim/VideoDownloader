@@ -32,3 +32,5 @@ temp/
 # Extension build artifacts
 extension/build/
 *.zip
+backend/downloads/*.mp4
+backend/downloads/downloads/
