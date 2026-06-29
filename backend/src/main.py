@@ -28,8 +28,6 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
 )
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Для локалки можно *, на проде укажи конкретные домены
@@ -38,17 +36,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(auth_router)
-app.include_router(downloads_router)
-app.include_router(billing_router)
+# ✅ ИСПРАВЛЕНО: добавлен префикс /api ко всем роутерам
+app.include_router(auth_router, prefix="/api")
+app.include_router(downloads_router, prefix="/api")
+app.include_router(billing_router, prefix="/api")
 
 
 @app.get("/api/health")
