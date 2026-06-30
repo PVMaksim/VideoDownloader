@@ -30,13 +30,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Для локалки можно *, на проде укажи конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ ИСПРАВЛЕНО: добавлен префикс /api ко всем роутерам
+# ✅ Роутеры подключены с префиксом /api
 app.include_router(auth_router, prefix="/api")
 app.include_router(downloads_router, prefix="/api")
 app.include_router(billing_router, prefix="/api")
