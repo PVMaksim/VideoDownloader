@@ -26,29 +26,17 @@ class MessageResponse(BaseModel):
 @router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     try:
-        sys.stderr.write(f"🚀 [ROUTER] register called for {req.email}\n")
-        sys.stderr.flush()
-        
         user = await create_user(req.email, req.password, db)
-        sys.stderr.write(f"🚀 [ROUTER] user created: {user.email}\n")
-        sys.stderr.flush()
         
-        sys.stderr.write(f"🚀 [ROUTER] calling send_verification_email\n")
-        sys.stderr.flush()
+        # ✅ Проверяем, нужно ли отправлять email
+        if not settings.SKIP_EMAIL_VERIFICATION:
+            await send_verification_email(user.email, user.verification_token)
         
-        await send_verification_email(user.email, user.verification_token)
-        
-        sys.stderr.write(f"🚀 [ROUTER] email sent, returning response\n")
-        sys.stderr.flush()
-        
-        return MessageResponse(message=f"✅ DEBUG_2026: Аккаунт создан для {req.email}")
+        return MessageResponse(message=f"✅ Аккаунт создан для {req.email}")
         
     except Exception as e:
-        sys.stderr.write(f"❌ [ROUTER] EXCEPTION: {type(e).__name__}: {e}\n")
-        sys.stderr.flush()
-        sys.stderr.write(f"❌ [ROUTER] TRACEBACK:\n{traceback.format_exc()}\n")
-        sys.stderr.flush()
-        raise
+        log.error(f"Ошибка регистрации: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 class LoginRequest(BaseModel):
     email: EmailStr

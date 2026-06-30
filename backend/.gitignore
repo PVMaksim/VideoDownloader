@@ -22,3 +22,26 @@ backend/downloads/
 data.db
 test_*.mp4
 downloads/
+# macOS resource forks
+._*
+
+# Python egg-info
+*.egg-info/
+UNKNOWN.egg-info/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
