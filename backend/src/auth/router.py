@@ -5,6 +5,7 @@ from db.models import User
 from auth.service import create_user, get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, EmailStr
+from config import settings
 
 sys.stderr.write("🚀 [MARKER] ROUTER LOADED\n")
 sys.stderr.flush()
