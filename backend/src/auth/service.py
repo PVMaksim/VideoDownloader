@@ -52,41 +52,38 @@ async def get_current_user(
             await db.commit()
             await db.refresh(mock_user)
         return mock_user
+    
     # Если SKIP_AUTH=false — требуем токен
     if not credentials:
-        from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Требуется токен")
-        from db.models import User as UserModel
-        # 🔧 Dev: ensure mock user exists in DB
-        from sqlalchemy import select
-        mock_user = await db.execute(select(UserModel).where(UserModel.id == 1))
-        mock_user = mock_user.scalar_one_or_none()
-        if not mock_user:
-            mock_user = UserModel(
-                email="dev@test.local", password_hash="", 
-                is_active=True, is_verified=True, plan=Plan.PRO
-            )
-            db.add(mock_user)
-            await db.commit()
-            await db.refresh(mock_user)
-        return mock_user
+    
     user_id = decode_token(credentials.credentials)
     if not user_id:
         raise HTTPException(status_code=401, detail="Неверный или истёкший токен")
+    
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
+    
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
+    
     if not user.is_verified and not _is_dev_skip_verification():
         raise HTTPException(status_code=403, detail={"code": "EMAIL_NOT_VERIFIED", "message": "Подтверди email"})
+    
     return user
 
 async def create_user(email: str, password: str, db: AsyncSession) -> User:
     from db.models import User
+    
+    # ✅ При SKIP_EMAIL_VERIFICATION=true пользователь создаётся сразу верифицированным
+    is_verified = _is_dev_skip_verification()
+    
     user = User(
         email=email,
         password_hash=hash_password(password),
         verification_token=secrets.token_urlsafe(32),
+        is_verified=is_verified,
+        is_active=True,
     )
     db.add(user)
     await db.commit()
