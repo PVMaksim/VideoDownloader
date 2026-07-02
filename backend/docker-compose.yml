@@ -19,6 +19,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./downloads:/app/downloads
+      - downloads:/tmp/videodownloader
     depends_on: [db, redis]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -40,6 +41,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./downloads:/app/downloads
+      - downloads:/tmp/videodownloader
     depends_on: [api, redis]
     command: ["sh", "-c", "pip install psycopg2-binary && exec celery -A src.worker.tasks worker --loglevel=info"]
 
