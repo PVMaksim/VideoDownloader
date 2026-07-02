@@ -42,7 +42,6 @@ async def get_current_user(
     if getattr(settings, "SKIP_AUTH", False):
         from db.models import User as UserModel
         # 🔧 Dev: ensure mock user exists in DB
-        from sqlalchemy import select
         mock_user = await db.execute(select(UserModel).where(UserModel.id == 1))
         mock_user = mock_user.scalar_one_or_none()
         if not mock_user:
