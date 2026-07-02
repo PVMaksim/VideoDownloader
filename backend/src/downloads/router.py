@@ -83,6 +83,9 @@ async def get_status(
     db: AsyncSession = Depends(get_db),
 ):
     download = await get_download(task_id, current_user.id, db)
+    download_url = None
+    if download.status == DownloadStatus.READY:
+        download_url = f"/api/downloads/file/{download.task_id}"
     return StatusResponse(
         task_id=download.task_id,
         status=download.status,
@@ -90,6 +93,7 @@ async def get_status(
         filename=download.filename,
         error=download.error_message,
         platform=download.platform,
+        download_url=download_url,
     )
 
 

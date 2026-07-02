@@ -1,6 +1,4 @@
 """Downloads service — business logic for download records"""
-import os
-import pathlib
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,14 +69,7 @@ async def create_download_record(
         await db.commit()
         await db.refresh(download)
 
-        if os.getenv('SKIP_EMAIL_VERIFICATION') == 'true':
-            download.status = DownloadStatus.READY
-            download.progress = 100
-            if download.filename:
-                file_path = pathlib.Path(settings.DOWNLOAD_DIR) / (download.filename or "default.mp4")
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_bytes(b'\x00' * 2048)
-            await db.flush()
+
         return download
     except ValueError:
         await db.rollback()
@@ -95,7 +86,7 @@ async def get_download(task_id: str, user_id: int, db: AsyncSession) -> Download
     return download
 
 async def get_file_path(download: Download) -> Path:
-    return Path(settings.DOWNLOAD_DIR) / download.filename
+    return Path(settings.DOWNLOAD_DIR) / download.task_id / download.filename
 
 async def get_user_downloads(user_id: int, db: AsyncSession, limit: int = 50) -> list[Download]:
     stmt = select(Download).where(Download.user_id == user_id).order_by(Download.created_at.desc()).limit(limit)
