@@ -11,15 +11,17 @@ from db.models import Plan, User
 
 bearer_scheme = HTTPBearer()
 
-def _is_dev_skip_verification() -> bool:
-    return str(getattr(settings, "SKIP_EMAIL_VERIFICATION", "")).lower() == "true"
+import bcrypt
 
-# 🔧 TEST MODE: dummy password functions (no hashing)
 def hash_password(password: str) -> str:
-    return "dummy_hash_" + password
+    pwd_bytes = password.encode('utf-8')[:72]  # bcrypt ограничение 72 байта
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return hashed.startswith("dummy_hash_") and hashed == "dummy_hash_" + plain
+    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+
+def _is_dev_skip_verification() -> bool:
+    return str(getattr(settings, "SKIP_EMAIL_VERIFICATION", "")).lower() == "true"
 
 def create_access_token(user_id: int) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -33,7 +35,7 @@ def decode_token(token: str) -> int | None:
         return None
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = None,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
     # 🔧 Dev: skip auth if SKIP_AUTH=true
