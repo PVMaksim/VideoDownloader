@@ -14,11 +14,21 @@ bearer_scheme = HTTPBearer()
 import bcrypt
 
 def hash_password(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')[:72]  # bcrypt ограничение 72 байта
-    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
+    """Хеширование пароля с помощью bcrypt (ограничение 72 байта)"""
+    pwd_bytes = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    """Проверка пароля с поддержкой legacy dummy_hash_"""
+    # Поддержка старых тестовых пользователей
+    if hashed.startswith("dummy_hash_"):
+        return hashed == "dummy_hash_" + plain
+    # Нормальная проверка bcrypt
+    try:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    except (ValueError, TypeError):
+        return False
 
 def _is_dev_skip_verification() -> bool:
     return str(getattr(settings, "SKIP_EMAIL_VERIFICATION", "")).lower() == "true"
