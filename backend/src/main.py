@@ -23,7 +23,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="VideoGrab API",
+    title="VideoDownloader API",
     version="2.0.0",
     docs_url="/docs" if settings.DEBUG else None,
 )
