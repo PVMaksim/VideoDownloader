@@ -1,275 +1,204 @@
-# VideoGrab Backend
+# VideoGrab Backend (VideoDownloader)
 
-[![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+Многопользовательский API для скачивания видео с поддержкой подписок и ограничений качества. Поддерживает регистрацию, верификацию по email, очередь задач на скачивание и интеграцию со Stripe.
 
-Multi-user API для скачивания видео с ограничениями по качеству и квотам. Поддерживает YouTube, VK, GetCourse и другие платформы через `yt-dlp`. Включает JWT-аутентификацию, email-верификацию через Resend, Stripe-биллинг и очередь задач на Celery.
-
----
-
-## 🚀 Быстрый старт
-
-### Локально (без Docker)
+## Быстрый старт (локально)
 
 ```bash
-# 1. Клонировать репозиторий
-git clone <repo-url>
-cd backend
-
-# 2. Создать виртуальное окружение
-python -m venv .venv && source .venv/bin/activate
-
-# 3. Установить зависимости
-pip install uv && uv pip install -r requirements.txt
-
-# 4. Настроить окружение
+# 1. Копируем окружение
 cp .env.example .env
-# Отредактируйте .env: DATABASE_URL, RESEND_API_KEY, SECRET_KEY
 
-# 5. Запустить сервер
+# 2. Запускаем через Docker
+docker-compose up --build
+
+# Или локально (нужен Python 3.12)
+pip install uv && uv pip install -r requirements.txt
 uvicorn src.main:app --reload
 
-# 6. Проверить здоровье
-curl http://localhost:8000/api/health
+Деплой на VPS
+Автоматически
+Через GitHub Actions при пуше в main.
+Вручную
 
-Через Docker Compose (рекомендуется)
+ssh deploy@193.242.109.48 "cd /home/deploy/VideoDownloader/backend && git pull origin main && docker-compose up --build -d"
 
-# 1. Настроить окружение
-cp .env.example .env
-# Отредактируйте необходимые переменные
-
-# 2. Запустить все сервисы
-docker-compose up --build -d
-
-# 3. Проверить логи
-docker-compose logs -f api
-
-# 4. Проверить здоровье (порт 8201 → 8000 внутри контейнера)
-curl http://localhost:8201/api/health
-⚠️ Важно: При запуске через Docker Compose сервер доступен на порту 8201, а не 8000.
-
-Документация API
-После запуска откройте в браузере:
-
-Swagger UI
-http://localhost:8201/docs
-🔹 ReDoc
-http://localhost:8201/redoc
-🔹 OpenAPI JSON
-http://localhost:8201/openapi.json
-
-Основные эндпоинты
-
-Метод	Путь	Описание	Доступ
-`POST`	`/api/auth/register`	Регистрация пользователя	Публичный
-`POST`	`/api/auth/login`	Получение JWT-токена	Публичный
-`POST`	`/api/auth/forgot-password`	Запрос сброса пароля	Публичный
-`GET`	`/api/auth/me`	Профиль текущего пользователя	🔐 Требуется токен
-`POST`	`/api/downloads/start`	Создать задачу скачивания	🔐 Требуется токен
-`GET`	`/api/downloads/status/{id}`	Статус задачи	🔐 Требуется токен
-`GET`	`/api/downloads/file/{id}`	Скачать готовый файл	🔐 Требуется токен
-`GET`	`/api/downloads/history`	История скачиваний	🔐 Требуется токен
-`GET`	`/api/health`	Проверка здоровья сервиса	Публичный
-
-Использование защищённых эндпоинтов
-После успешного логина вы получите JWT-токен:
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-
-Используйте его в заголовке Authorization:
-
-curl -X GET http://localhost:8201/api/downloads/history \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  В Swagger UI: нажмите кнопку "Authorize" в правом верхнем углу → вставьте токен → "Authorize".
-
-  Переменные окружения
-Все настройки — в файле .env. Скопируйте шаблон: cp .env.example .env
-
-Переменная	Описание	Пример
-`DATABASE_URL`	Подключение к PostgreSQL	`postgresql+asyncpg://user:pass@db:5432/videodownloader`
-`SECRET_KEY`	Секрет для подписи JWT	`openssl rand -hex 32`
-`RESEND_API_KEY`	API-ключ Resend для отправки писем	`re_xxx...`
-
-Переменная	Описание	Пример / Значение по умолчанию		
-`APP_URL`	Публичный адрес приложения (для ссылок в письмах)	`http://localhost:8201`		
-`SKIP_EMAIL_VERIFICATION`	Пропускать верификацию email (только dev!)	`false`		
-`SKIP_AUTH`	Отключить проверку аутентификации (только dev!)	`false`		
-`EMAIL_FROM`	Адрес отправителя писем	`"VideoGrab <onboarding@resend.dev>"`		
-`ACCESS_TOKEN_EXPIRE_MINUTES`	Время жизни JWT-токена	`30`		
-`DAILY_LIMIT`	Лимит скачиваний в день для бесплатного тарифа	`3`		
-`FREE_MAX_HEIGHT`	Максимальное качество для бесплатного тарифа	`720`		
-`STRIPE_SECRET_KEY`	Секретный ключ Stripe (для биллинга)	`sk_test_...`		
-`REDIS_URL`	Подключение к Redis (для очередей)	`redis://redis:6379/0`		
-
-Настройка email-верификации
-Для отправки писем через Resend:
-Зарегистрируйтесь на resend.com
-Получите API-ключ в дашборде
-Добавьте в .env:
-
-RESEND_API_KEY=re_xxx...
-EMAIL_FROM="VideoGrab <onboarding@resend.dev>"
-
-Важно: Без верификации домена Resend разрешает отправку только на ваш зарегистрированный email.
-Для тестов на любые адреса:
-Верифицируйте домен в Resend Domains, ИЛИ
-Установите SKIP_EMAIL_VERIFICATION=true в .env (только для разработки!)
-
-Миграции базы данных (Alembic)
-
-# Создать новую миграцию после изменения моделей
-alembic revision --autogenerate -m "add_user_verification_fields"
-
-# Применить миграции
-alembic upgrade head
-
-# Откатить последнюю миграцию
-alembic downgrade -1
-
-# Проверить текущую ревизию
-alembic current
-
-При первом запуске приложения миграции применяются автоматически (если включено в main.py).
-
-Сервис	Порт	Описание		
-`api`	`8201:8000`	FastAPI сервер (основное приложение)		
-`db`	`5432` (внутри сети)	PostgreSQL 16 — хранение данных		
-`redis`	`6379` (внутри сети)	Redis 7 — кеш и брокер очередей		
-`worker`	—	Celery worker — фоновые задачи (скачивание, отправка писем)		
-
-# Полезные команды
-
-# Просмотр логов конкретного сервиса
-docker-compose logs -f api
-docker-compose logs -f worker
-
-# Перезапустить один сервис
-docker-compose restart api
-
-# Остановить и удалить контейнеры (данные БД сохранятся в volume)
-docker-compose down
-
-# Полная очистка (включая volumes — удалит данные БД!)
-docker-compose down -v
-
- Тестирование
-
- # Запустить все тесты
-pytest tests/ -v
-
-# Запустить конкретный тест
-pytest tests/test_integration.py::test_download_flow -v
-
-# Запустить с покрытием кода
-pytest --cov=src tests/ --cov-report=html
-
-# Открыть отчёт о покрытии
-open htmlcov/index.html
-Требования к тестам:
-Все новые функции должны иметь юнит-тесты
-Интеграционные тесты используют тестовую БД (SQLite в памяти)
-Моки для внешних сервисов: Resend, Stripe, yt-dlp
-
-📁 Структура проекта
+Доступ к API
+URL: http://193.242.109.48:8301
+Health check: http://193.242.109.48:8301/api/health
+Swagger UI (только при DEBUG=true): http://193.242.109.48:8301/docs
+Переменные окружения
+Обязательные:
+DATABASE_URL — строка подключения к PostgreSQL (postgresql+asyncpg://user:pass@db:5432/videodownloader)
+SECRET_KEY — секретный ключ для JWT токенов
+ALGORITHM — алгоритм шифрования (по умолчанию HS256)
+Опциональные:
+DEBUG — режим отладки (true/false, по умолчанию false)
+SKIP_EMAIL_VERIFICATION — пропустить верификацию email (true для локальной разработки)
+SKIP_AUTH — пропустить аутентификацию (true только для тестов!)
+APP_URL — публичный URL приложения (по умолчанию http://193.242.109.48:8301)
+Email (Resend):
+RESEND_API_KEY — API ключ от Resend
+EMAIL_FROM — адрес отправителя (например, VideoGrab <noreply@neoxis.store>)
+SMTP (альтернатива Resend):
+SMTP_HOST — SMTP сервер (например, smtp.mail.ru)
+SMTP_PORT — порт SMTP (обычно 587)
+SMTP_USER — логин SMTP
+SMTP_PASS — пароль SMTP
+Ограничения (Free tier):
+FREE_DAILY_LIMIT — лимит скачиваний в день (по умолчанию 3)
+FREE_MAX_HEIGHT — максимальное качество видео (по умолчанию 720)
+Файлы:
+DOWNLOAD_DIR — папка для скачанных файлов (по умолчанию /tmp/videodownloader)
+FILE_TTL_HOURS — время хранения файлов в часах (по умолчанию 2)
+Структура проекта
 
 backend/
 ├── src/
-│   ├── main.py              # Точка входа: FastAPI app, middleware, routers
-│   ├── config.py            # Pydantic Settings, загрузка из .env
-│   ├── db/
-│   │   ├── database.py      # SQLAlchemy session, engine
-│   │   └── models.py        # ORM-модели: User, DownloadTask, etc.
+│   ├── main.py              # FastAPI приложение
+│   ├── config.py            # Настройки из .env
 │   ├── auth/
-│   │   ├── router.py        # Эндпоинты: register, login, me
-│   │   ├── service.py       # Логика: hash_password, JWT, get_current_user
-│   │   └── email.py         # Отправка писем через Resend
+│   │   ├── router.py        # Эндпоинты регистрации/логина
+│   │   ├── service.py       # Логика аутентификации
+│   │   └── email.py         # Отправка писем
 │   ├── downloads/
-│   │   ├── router.py        # Эндпоинты: start, status, file, history
-│   │   ├── service.py       # Логика: yt-dlp wrapper, quota checks
-│   │   └── schemas.py       # Pydantic схемы запросов/ответов
+│   │   ├── router.py        # Эндпоинты скачивания
+│   │   └── service.py       # Логика скачивания
 │   ├── billing/
-│   │   └── ...              # Stripe integration (webhooks, subscriptions)
-│   └── worker.py            # Celery tasks: send_email, process_download
+│   │   └── router.py        # Эндпоинты Stripe
+│   ├── db/
+│   │   ├── database.py      # Подключение к БД
+│   │   └── models.py        # SQLAlchemy модели
+│   └── worker/
+│       └── tasks.py         # Celery задачи
+├── tests/                   # Интеграционные тесты
 ├── alembic/                 # Миграции БД
-│   ├── versions/            # Автоматически сгенерированные миграции
-│   └── env.py               # Конфигурация Alembic
-├── tests/
-│   ├── conftest.py          # Fixtures: test_db, mock_resend, client
-│   ├── test_auth.py         # Тесты аутентификации
-│   ├── test_downloads.py    # Тесты скачивания
-│   └── test_integration.py  # E2E тесты
-├── docker-compose.yml       # Оркестрация сервисов
-├── Dockerfile               # Сборка Python-образа
-├── requirements.txt         # Зависимости (pip)
-├── pyproject.toml           # Конфигурация проекта (uv, ruff, mypy)
-├── pytest.ini               # Настройки pytest
-├── ruff.toml                # Линтинг (аналог flake8 + isort)
-├── mypy.ini                 # Статическая проверка типов
-├── .env.example             # Шаблон переменных окружения
-├── .gitignore               # Исключения для Git
-├── CLAUDE.md                # Технический контекст для AI-ассистентов
-├── MEMORY.md                # Дневник разработки (сессии, решения, долги)
-└── README.md                # Этот файл
+├── .github/workflows/       # CI/CD пайплайны
+├── Dockerfile               # Образ для API
+├── Dockerfile.worker        # Образ для Celery worker (с ffmpeg)
+├── docker-compose.yml       # Docker Compose конфигурация
+└── requirements.txt         # Python зависимости
 
-❓ Частые проблемы (Troubleshooting)
+API Endpoints
+Аутентификация (/api/auth)
+POST /api/auth/register — регистрация нового пользователя
+POST /api/auth/login — получение JWT токена
+POST /api/auth/forgot-password — запрос сброса пароля
+POST /api/auth/reset-password — сброс пароля по токену
+GET /api/auth/me — получение данных текущего пользователя
+Скачивание (/api/downloads)
+POST /api/downloads — создать задачу на скачивание
+GET /api/downloads/status/{task_id} — статус задачи
+GET /api/downloads/file/{task_id} — скачать файл
+GET /api/downloads/history — история скачиваний
+GET /api/downloads/stats — статистика использования
+Подписки (/api/billing)
+POST /api/billing/subscribe — оформить подписку
+GET /api/billing/subscription — информация о подписке
+POST /api/billing/cancel — отменить подписку
+POST /api/billing/webhook — webhook от Stripe
+Системные
+GET /api/health — проверка работоспособности
+Тестирование
 
-Проблема	Возможная причина	Решение		
-`ValueError: password cannot be longer than 72 bytes`	Ограничение bcrypt через passlib	Обновите `passlib[bcrypt]` и добавьте обрезку пароля: `password.encode()[:72]`		
-`ResendError: You can only send testing emails...`	Неверифицированный домен в Resend	Отправляйте на свой зарегистрированный email ИЛИ верифицируйте домен в [Resend Domains](https://resend.com/domains)		
-Порт 8000/8201 занят	Другой процесс использует порт	Проверьте: `lsof -i :8201` и освободите порт, или измените в `docker-compose.yml`		
-`ModuleNotFoundError: auth.service`	Кэш `.pyc` или неверный PYTHONPATH	Очистите кэш: `find . -name "__pycache__" -exec rm -rf {} +` и пересоберите образ		
-Письма не приходят	Неправильный `EMAIL_FROM` или спам-фильтр	Проверьте папку "Спам", убедитесь что `EMAIL_FROM` в формате `"Name <email@domain>"`		
-JWT не принимается	Истёк срок токена или неверный секрет	Проверьте `SECRET_KEY` в `.env`, срок жизни токена в `ACCESS_TOKEN_EXPIRE_MINUTES`		
-        
-     🚢 Деплой на VPS (Ubuntu 22.04)
+# Запустить все тесты
+pytest tests/ -v
 
-        # 1. Подключиться к серверу
-ssh user@your-vps-ip
+# Запустить конкретный тест
+pytest tests/test_auth.py -v
 
-# 2. Установить Docker и Docker Compose
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER  # затем перелогиньтесь
+# С покрытием
+pytest tests/ --cov=src --cov-report=html
 
-# 3. Клонировать проект
-git clone <repo-url> /opt/videograb
-cd /opt/videograb/backend
+Проверка работоспособности
+1. Health check
+curl http://localhost:8301/api/health
 
-# 4. Настроить окружение
-cp .env.example .env
-# Отредактируйте: DATABASE_URL (на внешний хост или оставьте db), SECRET_KEY, RESEND_API_KEY
+2. Регистрация
 
-# 5. Запустить
-docker-compose pull
-docker-compose up -d
+curl -X POST http://localhost:8301/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!@#"}'
 
-# 6. (Опционально) Настроить nginx + SSL через certbot
-# См. пример конфига в /docs/nginx.conf.example
+  3. Логин
 
-Автоматический деплой через GitHub Actions
-При пуше в ветку main срабатывает пайплайн .github/workflows/deploy.yml, который:
-Собирает Docker-образ
-Пушит в GitHub Container Registry
-Подключается к серверу по SSH
-Обновляет контейнеры через docker-compose pull && up -d
-Требуется настроить секреты репозитория:
-DEPLOY_HOST — IP или домен сервера
-DEPLOY_USER — пользователь SSH
-DEPLOY_KEY — приватный SSH-ключ для деплоя
-🤝 Вклад в проект
-Создайте ветку от main: git checkout -b feature/your-feature
-Внесите изменения, добавьте тесты
-Прогоните линтеры: ruff check src/ && mypy src/
-Убедитесь, что тесты проходят: pytest
-Создайте Pull Request с описанием изменений
-Требования к коду
-Все функции — с docstrings на английском
-Комментарии к бизнес-логике — на русском
-Никаких «магических чисел» — только именованные константы из config.py
-Обработка всех исключений с логированием: log.error(...)
-Модульность: один файл = одна ответственность
-📄 Лицензия
-MIT. См. файл LICENSE для деталей.
-💡 Совет разработчику:
-Перед началом работы прочитайте CLAUDE.md (технический контекст для AI) и MEMORY.md (история решений и технический долг). Это ускорит погружение в проект.
+  curl -X POST http://localhost:8301/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!@#"}'
+
+  4. Проверка токена
+
+  TOKEN="<токен_из_предыдущего_шага>"
+curl -X GET http://localhost:8301/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+
+  Логи
+
+  # Логи API
+docker-compose logs --tail=50 api
+
+# Логи Worker
+docker-compose logs --tail=50 worker
+
+# Все логи
+docker-compose logs --tail=100
+
+База данных
+
+# Подключиться к PostgreSQL
+docker-compose exec db psql -U user -d videodownloader
+
+# Список пользователей
+docker-compose exec db psql -U user -d videodownloader -c "SELECT id, email, is_verified, plan FROM users;"
+
+# Структура таблицы users
+docker-compose exec db psql -U user -d videodownloader -c "\d users"
+
+Известные проблемы и решения
+1. Ошибка insufficient permission for adding an object to repository database .git/objects
+Причина: Файлы в .git/ принадлежат разным пользователям.
+Решение:
+
+sudo chown -R deploy:deploy /home/deploy/VideoDownloader/.git
+chmod -R g+rwX /home/deploy/VideoDownloader/.git
+git config core.sharedRepository true
+
+2. Ошибка The neoxis.store domain is not verified
+Причина: Домен не верифицирован в Resend.
+Решение:
+Вариант 1: Верифицировать домен на https://resend.com/domains
+Вариант 2: Использовать onboarding@resend.dev в EMAIL_FROM
+Вариант 3: Установить SKIP_EMAIL_VERIFICATION=true для тестов
+3. Пароли хранятся как dummy_hash_
+Причина: В src/auth/service.py используется заглушка вместо bcrypt.
+Решение: Заменить на нормальный bcrypt:
+
+import bcrypt
+
+def hash_password(password: str) -> str:
+    pwd_bytes = password.encode('utf-8')[:72]  # bcrypt ограничение 72 байта
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+
+Мониторинг
+
+# Статус контейнеров
+docker-compose ps
+
+# Использование ресурсов
+docker stats
+
+# Очистка старых файлов
+docker system prune -f
+
+Обновление
+
+cd /home/deploy/VideoDownloader/backend
+git pull origin main
+docker-compose up --build -d
+
+Контакты
+Email для тестов: m008ba@mail.ru
+VPS: 193.242.109.48
+Порт API: 8301
