@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "VideoGrab",
+  "name": "VideoDownloader",
   "version": "1.0.2",
   "description": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0439 \u0432\u0438\u0434\u0435\u043e \u0441 GetCourse \u0438 \u0434\u0440\u0443\u0433\u0438\u0445 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c",
   "permissions": [
@@ -15,7 +15,7 @@
     "downloads"
   ],
   "host_permissions": [
-   "http://193.242.109.48:8301/*",
+   "https://videodownloader.neoxis.store:8450/*",
   "http://localhost:8000/*",
   "<all_urls>",
   "http://localhost:8201/*",
@@ -62,6 +62,6 @@
   ],
 
  "content_security_policy": {
-   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://193.242.109.48:8301 https://neoxis.store"
+   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store"
  }
 }
