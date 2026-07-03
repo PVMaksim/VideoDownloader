@@ -140,9 +140,9 @@ class AuthForm extends HTMLElement {
     
     console.log('📝 Form data:', { email: email, password: '***' });
     try {
-      console.log('🌐 Sending login request to:', `${this.api}/auth/login`);
+      console.log('🌐 Sending login request to:', `${this.api}/api/auth/login`);
       console.log(' Sending request...');
-      const r = await fetch(`${this.api}/auth/login`, {
+      const r = await fetch(`${this.api}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass })
@@ -190,7 +190,7 @@ class AuthForm extends HTMLElement {
     const email = this.shadowRoot.getElementById('registerEmail').value;
     const pass = this.shadowRoot.getElementById('registerPassword').value;
     try {
-      const r = await fetch(`${this.api}/auth/register`, {
+      const r = await fetch(`${this.api}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass })
@@ -225,7 +225,7 @@ class AuthForm extends HTMLElement {
     btn.disabled = true;
 
     try {
-      const r = await fetch(`${this.api}/auth/forgot-password`, {
+      const r = await fetch(`${this.api}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
