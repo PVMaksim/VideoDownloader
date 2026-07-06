@@ -15,7 +15,7 @@
     "downloads"
   ],
   "host_permissions": [
-   "http://videodownloader.neoxis.store:8050/*",
+   "https://videodownloader.neoxis.store:8450/*",
   "http://localhost:8000/*",
   "<all_urls>",
   "http://localhost:8201/*",
@@ -62,6 +62,6 @@
   ],
 
  "content_security_policy": {
-   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://videodownloader.neoxis.store:8050 https://neoxis.store"
+   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store"
  }
 }
