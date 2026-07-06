@@ -179,8 +179,7 @@ async function startDownload(video, height, card) {
     const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
 
     const body = {
-      req: {
-        video_url: video.url,
+      video_url: video.url,
         cookies: cookieStr,
         referer: tab.url,
         user_agent: navigator.userAgent,
@@ -251,16 +250,6 @@ async function startDownload(video, height, card) {
         throw new Error("Не удалось скачать файл на устройство: " + err.message);
     } console.log("[DEBUG] Polling завершён, начинаю скачивание на Mac...");
 
-    const fileRes = await fetch(`${backendUrl}/downloads/file/${task_id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!fileRes.ok) throw new Error("Ошибка скачивания файла");
-    const blob = await fileRes.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `video_${task_id}.mp4`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
 
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
