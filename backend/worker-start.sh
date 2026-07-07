@@ -9,6 +9,12 @@ if ! command -v deno &> /dev/null; then
     export PATH="$DENO_INSTALL/bin:$PATH"
 fi
 
+# Устанавливаем yt-dlp
+pip install --upgrade yt-dlp
+
+# Устанавливаем ffmpeg
+apt-get update && apt-get install -y ffmpeg
+
 # Устанавливаем psycopg2
 pip install psycopg2-binary
 
