@@ -30,7 +30,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: Dockerfile
     mem_limit: 512m
     mem_reservation: 256m
     env_file:
@@ -41,18 +41,10 @@ services:
     volumes:
       - ./src:/app/src
       - ./downloads:/app/downloads
+      - ./worker-start.sh:/app/worker-start.sh:ro
       - downloads:/tmp/videodownloader
     depends_on: [api, redis]
-        command: 
-      - sh
-      - -c
-      - |
-        curl -fsSL https://deno.land/install.sh | sh
-        export DENO_INSTALL="/root/.deno"
-        export PATH="$$DENO_INSTALL/bin:$$PATH"
-        pip install psycopg2-binary
-        exec celery -A src.worker.tasks worker --loglevel=info
-        
+    command: ["./worker-start.sh"]
 
   db:
     image: postgres:15-alpine
