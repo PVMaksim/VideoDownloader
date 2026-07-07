@@ -188,7 +188,7 @@ async function startDownload(video, height, card) {
     };
 
         if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
-    const res = await fetch(`${backendUrl}/downloads`, {
+    const res = await fetch(`${backendUrl}/api/downloads`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -217,7 +217,7 @@ async function startDownload(video, height, card) {
     console.log("[DEBUG] Polling finished! Server says file is ready.");
     
     try {
-        const fileUrl = `${backendUrl}/downloads/file/${task_id}`;
+        const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
         console.log("[DEBUG] Attempting to fetch file from:", fileUrl);
         
         const fileRes = await fetch(fileUrl, {
@@ -276,7 +276,7 @@ async function pollStatus(taskId, pb, pt, pp) {
   return new Promise((resolve, reject) => {
     const iv = setInterval(async () => {
       try {
-        const res = await fetch(`${backendUrl}/downloads/status/${taskId}`, {
+        const res = await fetch(`${backendUrl}/api/downloads/status/${taskId}`, {
           headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);
