@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoDownloader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0439 \u0432\u0438\u0434\u0435\u043e \u0441 GetCourse \u0438 \u0434\u0440\u0443\u0433\u0438\u0445 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c",
   "permissions": [
     "webRequest",
