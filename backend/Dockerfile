@@ -5,8 +5,13 @@ WORKDIR /app
 # Минимальные системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
+# Устанавливаем deno для yt-dlp
+RUN curl -fsSL https://deno.land/install.sh | sh \
+    && mv /root/.deno/bin/deno /usr/local/bin/
 
 # Копируем зависимости
 COPY pyproject.toml ./

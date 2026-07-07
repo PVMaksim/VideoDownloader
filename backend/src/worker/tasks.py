@@ -107,6 +107,24 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         cmd += ["--user-agent", user_agent]
 
     cmd.append(video_url)
+    
+    log.info(f"[{task_id}] Команда: {' '.join(cmd)}")
+    
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    
+    # Логируем stderr
+    import threading
+    def log_stderr():
+        for line in process.stderr:
+            log.error(f"[{task_id}] yt-dlp stderr: {line.strip()}")
+    threading.Thread(target=log_stderr, daemon=True).start()
+
 
     log.debug(f"[{task_id}] CMD: {' '.join(cmd[:8])}")
 
