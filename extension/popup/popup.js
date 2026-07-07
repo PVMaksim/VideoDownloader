@@ -14,7 +14,7 @@ const PLATFORM_LABELS = {
   youtube: "YouTube", instagram: "Instagram", vk: "VK", hls: "HLS",
 };
 
-const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls"]);
+const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls", "youtube", "instagram", "vk"]);
 const PAGE_PLATFORMS = new Set(["youtube", "instagram", "vk"]);
 
 const backendUrl = "https://videodownloader.neoxis.store:8450";
