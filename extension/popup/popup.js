@@ -185,8 +185,6 @@ async function startDownload(video, height, card) {
         user_agent: navigator.userAgent,
         height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
         format: "best",
-      },
-    },
     };
 
         if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
