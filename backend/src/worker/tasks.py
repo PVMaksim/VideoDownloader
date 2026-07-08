@@ -83,8 +83,9 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     out_dir = Path(settings.DOWNLOAD_DIR) / task_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    safe_title = re.sub(r'[^\w\sа-яёА-ЯЁ-]', '', title or "video")[:60].strip()
-    out_path = out_dir / f"{safe_title}-{height}p.%(ext)s"
+    # Очищаем название от специальных символов, но оставляем больше символов
+    safe_title = re.sub(r'[<>:"/\\|?*]', '', title or "video")[:100].strip()
+    out_path = out_dir / f"{safe_title}.%(ext)s"
 
     cmd = [
         "yt-dlp",
@@ -149,6 +150,20 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     process.wait()
     if process.returncode != 0:
         raise RuntimeError(f"yt-dlp завершился с кодом {process.returncode}")
+
+    # Найти скачанный файл
+    files = [f for f in out_dir.iterdir() if f.suffix in (".mp4", ".mkv", ".webm") and "cookies" not in f.name]
+    if not files:
+        raise RuntimeError("Файл не найден после скачивания")
+    
+    # Проверка размера файла
+    file_path = files[0]
+    if file_path.stat().st_size == 0:
+        raise RuntimeError("Файл пустой")
+    if file_path.stat().st_size < 1024 * 1024:  # меньше 1MB
+        log.warning(f"[{task_id}] Файл очень маленький: {file_path.stat().st_size} байт")
+
+    return file_path
 
     # Найти скачанный файл
     files = [f for f in out_dir.iterdir() if f.suffix in (".mp4", ".mkv", ".webm") and "cookies" not in f.name]
