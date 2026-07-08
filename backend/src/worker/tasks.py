@@ -88,13 +88,8 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
 
     cmd = [
         "yt-dlp",
-        "-f", f"best[height<={height}]/bestvideo[height<={height}]+bestaudio/best",
-        "-o", str(out_path),
-        "--no-playlist",
-        "--newline",
-        "--merge-output-format", "mp4",
-        "--no-warnings",
-    ]
+        "-f", f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best",
+        ]
 
     if cookies:
         cookies_file = out_dir / "cookies.txt"
