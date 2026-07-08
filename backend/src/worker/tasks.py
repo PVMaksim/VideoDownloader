@@ -89,7 +89,13 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     cmd = [
         "yt-dlp",
         "-f", f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best",
-        ]
+        "-o", str(out_path),
+        "--no-playlist",
+        "--newline",
+        "--merge-output-format", "mp4",
+        "--no-warnings",
+        "--remote-components", "ejs:github",
+    ]
 
     if cookies:
         cookies_file = out_dir / "cookies.txt"
@@ -170,17 +176,31 @@ def _parse_progress(line: str) -> float | None:
 def _cookies_to_netscape(cookies_str: str, referer: str = "") -> str:
     """Convert 'name=val; name2=val2' to Netscape cookie format"""
     from urllib.parse import urlparse
+    
+    # Пустые cookies
+    if not cookies_str:
+        return "# Netscape HTTP Cookie File\n"
+    
+    domain = ".youtube.com"
     try:
-        domain = urlparse(referer).hostname or "."
-    except Exception:
-        domain = "."
-
+        if referer:
+            parsed = urlparse(referer)
+            domain = "." + parsed.netloc.split(".")[-2] + "." + parsed.netloc.split(".")[-1]
+    except:
+        pass
+    
     lines = ["# Netscape HTTP Cookie File"]
-    for pair in cookies_str.split(";"):
-        pair = pair.strip()
-        if "=" not in pair:
+    cookies = cookies_str.split(";")
+    
+    for cookie in cookies:
+        if "=" not in cookie:
             continue
-        name, _, value = pair.partition("=")
-        lines.append(f"{domain}\tFALSE\t/\tFALSE\t0\t{name.strip()}\t{value.strip()}")
-
-    return "\n".join(lines)
+        name, value = cookie.split("=", 1)
+        name = name.strip()
+        value = value.strip()
+        if not name or not value:
+            continue
+        # Format: domain flag path secure expiration name value
+        lines.append(f"{domain}\tTRUE\t/\tFALSE\t9999999999\t{name}\t{value}")
+    
+    return "\n".join(lines) + "\n"
