@@ -77,6 +77,29 @@ def download_video(
 
 def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, db) -> Path:
     """Run yt-dlp subprocess and track progress"""
+    
+    log.info(f"[{task_id}] Полученные параметры: title={title}, height={height}")
+    
+    # Если title не передан или пустой - получаем через yt-dlp
+    if not title or title == "video":
+        try:
+            log.info(f"[{task_id}] Получаем название видео через yt-dlp...")
+            info_cmd = [
+                "yt-dlp", 
+                "--get-title", 
+                "--no-warnings",
+                "--no-playlist",
+                video_url
+            ]
+            result = subprocess.run(info_cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0 and result.stdout.strip():
+                title = result.stdout.strip()
+                log.info(f"[{task_id}] Получено название: {title}")
+            else:
+                log.warning(f"[{task_id}] Не удалось получить название: {result.stderr}")
+        except Exception as e:
+            log.warning(f"[{task_id}] Ошибка при получении названия: {e}")
+    
     import subprocess
 
     out_dir = Path(settings.DOWNLOAD_DIR) / task_id

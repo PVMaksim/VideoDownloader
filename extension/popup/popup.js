@@ -180,12 +180,18 @@ async function startDownload(video, height, card) {
 
     const body = {
       video_url: video.url,
-        cookies: cookieStr,
-        referer: tab.url,
-        user_agent: navigator.userAgent,
-        height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
-        format: "best",
+      cookies: cookieStr,
+      referer: tab.url,
+      user_agent: navigator.userAgent,
+      height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
+      format: "best",
     };
+    
+    console.log("[DEBUG] Sending download request:", {
+      url: video.url,
+      title: video.pageTitle,
+      height: selectedHeight
+    });
 
         if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
     const res = await fetch(`${backendUrl}/api/downloads`, {
