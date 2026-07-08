@@ -75,7 +75,6 @@ def download_video(
             shutil.rmtree(Path(settings.DOWNLOAD_DIR) / task_id, ignore_errors=True)
             raise self.retry(exc=e)
 
-
 def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, db) -> Path:
     """Run yt-dlp subprocess and track progress"""
     import subprocess
@@ -83,8 +82,23 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     out_dir = Path(settings.DOWNLOAD_DIR) / task_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Очищаем название от специальных символов, но оставляем больше символов
-    safe_title = re.sub(r'[<>:"/\\|?*]', '', title or "video")[:100].strip()
+    # Получаем правильное название видео через yt-dlp
+    try:
+        info_cmd = ["yt-dlp", "--get-title", "--no-warnings", video_url]
+        if cookies:
+            cookies_file = out_dir / "cookies.txt"
+            cookies_file.write_text(_cookies_to_netscape(cookies, referer))
+            info_cmd += ["--cookies", str(cookies_file)]
+        
+        result = subprocess.run(info_cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and result.stdout.strip():
+            title = result.stdout.strip()
+    except Exception as e:
+        log.warning(f"[{task_id}] Не удалось получить название: {e}")
+        title = title or "video"
+
+    # Очищаем название от недопустимых символов
+    safe_title = re.sub(r'[<>:"/\\|?*]', '', title)[:100].strip()
     out_path = out_dir / f"{safe_title}.%(ext)s"
 
     cmd = [
@@ -96,11 +110,13 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         "--merge-output-format", "mp4",
         "--no-warnings",
         "--remote-components", "ejs:github",
+        "--ffmpeg-location", "/usr/bin/ffmpeg",
     ]
 
     if cookies:
         cookies_file = out_dir / "cookies.txt"
-        cookies_file.write_text(_cookies_to_netscape(cookies, referer))
+        if not cookies_file.exists():
+            cookies_file.write_text(_cookies_to_netscape(cookies, referer))
         cmd += ["--cookies", str(cookies_file)]
 
     if referer:
@@ -109,9 +125,9 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         cmd += ["--user-agent", user_agent]
 
     cmd.append(video_url)
-    
-    log.info(f"[{task_id}] Команда: {' '.join(cmd)}")
-    
+
+    log.info(f"[{task_id}] Команда: {' '.join(cmd[:8])}")
+
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -119,25 +135,8 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         text=True,
         bufsize=1,
     )
-    
-    # Логируем stderr
-    import threading
-    def log_stderr():
-        for line in process.stderr:
-            log.error(f"[{task_id}] yt-dlp stderr: {line.strip()}")
-    threading.Thread(target=log_stderr, daemon=True).start()
 
-
-    log.debug(f"[{task_id}] CMD: {' '.join(cmd[:8])}")
-
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-    )
-
+    # Читаем stdout для прогресса
     for line in process.stdout:
         line = line.strip()
         if not line:
@@ -148,7 +147,11 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
             _set_status(db, task_id, DownloadStatus.DOWNLOADING, progress=int(progress))
 
     process.wait()
+    
+    # Проверяем stderr на ошибки
+    stderr_output = process.stderr.read()
     if process.returncode != 0:
+        log.error(f"[{task_id}] yt-dlp stderr: {stderr_output}")
         raise RuntimeError(f"yt-dlp завершился с кодом {process.returncode}")
 
     # Найти скачанный файл
@@ -156,22 +159,18 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     if not files:
         raise RuntimeError("Файл не найден после скачивания")
     
-    # Проверка размера файла
     file_path = files[0]
-    if file_path.stat().st_size == 0:
+    
+    # Проверка размера файла
+    file_size = file_path.stat().st_size
+    if file_size == 0:
         raise RuntimeError("Файл пустой")
-    if file_path.stat().st_size < 1024 * 1024:  # меньше 1MB
-        log.warning(f"[{task_id}] Файл очень маленький: {file_path.stat().st_size} байт")
+    if file_size < 1024 * 100:  # меньше 100KB
+        log.warning(f"[{task_id}] Файл очень маленький: {file_size} байт")
+    
+    log.info(f"[{task_id}] Файл сохранён: {file_path.name} ({file_size} байт)")
 
     return file_path
-
-    # Найти скачанный файл
-    files = [f for f in out_dir.iterdir() if f.suffix in (".mp4", ".mkv", ".webm") and "cookies" not in f.name]
-    if not files:
-        raise RuntimeError("Файл не найден после скачивания")
-
-    return files[0]
-
 
 def _set_status(db: Session, task_id: str, status: DownloadStatus, **kwargs):
     """Update download status in DB"""
