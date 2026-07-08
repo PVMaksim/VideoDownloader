@@ -180,6 +180,7 @@ async function startDownload(video, height, card) {
 
     const body = {
       video_url: video.url,
+      title: video.pageTitle,
       cookies: cookieStr,
       referer: tab.url,
       user_agent: navigator.userAgent,

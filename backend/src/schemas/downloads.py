@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 class DownloadRequest(BaseModel):
+    title: str | None = None
     video_url: str
     height: int | None = None
     cookies: Optional[str] = None
