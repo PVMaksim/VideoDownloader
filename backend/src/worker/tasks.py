@@ -120,8 +120,15 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         log.warning(f"[{task_id}] Не удалось получить название: {e}")
         title = title or "video"
 
-    # Очищаем название от недопустимых символов
-    safe_title = re.sub(r'[<>:"/\\|?*]', '', title)[:100].strip()
+    # Очищаем название от недопустимых символов для файловой системы
+    safe_title = re.sub(r'[<>:"/\\|?*]', '', title or "video")[:100].strip()
+    # Убираем "- YouTube" из конца, если есть
+    safe_title = re.sub(r'\s*-\s*YouTube\s*$', '', safe_title)
+    # Убираем лишние пробелы
+    safe_title = ' '.join(safe_title.split())
+    
+    log.info(f"[{task_id}] Название файла: {safe_title}")
+    
     out_path = out_dir / f"{safe_title}.%(ext)s"
 
     cmd = [
