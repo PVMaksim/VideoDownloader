@@ -217,20 +217,66 @@ async function startDownload(video, height, card) {
 
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Using Chrome Downloads API for:", fileUrl);
+      console.log("[DEBUG] Downloading file from:", fileUrl);
 
+      // Сначала проверяем, доступен ли файл
+      const testRes = await fetch(fileUrl, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+
+      if (!testRes.ok) {
+        throw new Error(`Сервер вернул ${testRes.status} при попытке доступа к файлу`);
+      }
+
+      // Проверяем Content-Type
+      const contentType = testRes.headers.get("content-type");
+      console.log("[DEBUG] Content-Type:", contentType);
+
+      if (contentType && contentType.includes("application/json")) {
+        // Сервер вернул JSON (вероятно, ошибку) вместо видео
+        const errorData = await testRes.json();
+        console.error("[ERROR] Server returned JSON:", errorData);
+        throw new Error("Сервер вернул ошибку вместо файла: " + JSON.stringify(errorData));
+      }
+
+      // Если всё OK, используем Chrome Downloads API с правильными заголовками
       chrome.downloads.download({
-        url: `${fileUrl}?token=${token}`,
+        url: fileUrl,
         filename: cleanFilename,
         saveAs: true,
-        conflictAction: "uniquify"
+        conflictAction: "uniquify",
+        headers: [
+          {
+            name: "Authorization",
+            value: `Bearer ${token}`
+          }
+        ]
       }, (downloadId) => {
         if (chrome.runtime.lastError) {
           console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
           throw new Error("Ошибка при запуске скачивания: " + chrome.runtime.lastError.message);
         }
         console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
+        
+        // Отслеживаем статус загрузки
+        chrome.downloads.onChanged.addListener(function onDownloadChanged(downloadDelta) {
+          if (downloadDelta.id === downloadId && downloadDelta.state) {
+            if (downloadDelta.state.current === "complete") {
+              console.log("[DOWNLOAD] Completed successfully");
+              chrome.downloads.onChanged.removeListener(onDownloadChanged);
+            } else if (downloadDelta.state.current === "interrupted") {
+              console.error("[DOWNLOAD] Interrupted:", downloadDelta);
+              chrome.downloads.onChanged.removeListener(onDownloadChanged);
+            }
+          }
+        });
       });
+} catch (err) {
+  console.error("[ERROR] Download process failed:", err);
+  throw new Error("Не удалось скачать файл: " + err.message);
+}
+    
     } catch (err) {
       console.error("[ERROR] Download process failed:", err);
       throw new Error("Не удалось скачать файл на устройство: " + err.message);
