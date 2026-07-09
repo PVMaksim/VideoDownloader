@@ -220,8 +220,8 @@ async function startDownload(video, height, card) {
     setDlState(dlBtn, "loading", "Скачивается...");
     pt.textContent = "Скачивается на сервере...";
 
-    await pollStatus(task_id, pb, pt, pp);
-    console.log("[DEBUG] Polling finished! Server says file is ready.");
+    const filename = await pollStatus(task_id, pb, pt, pp);
+    console.log("[DEBUG] Polling finished! Filename:", filename);
     
     try {
         const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
@@ -244,7 +244,7 @@ async function startDownload(video, height, card) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `video_${task_id}.mp4`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -286,12 +286,12 @@ async function pollStatus(taskId, pb, pt, pp) {
         const res = await fetch(`${backendUrl}/api/downloads/status/${taskId}`, {
           headers: { "Authorization": `Bearer ${token}` },
         });
-        const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);
+        const data = await res.json();
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
         pp.textContent = pct + "%";
         if (["ready", "completed", "success"].includes(data.status)) {
-          clearInterval(iv); pb.style.width = "100%"; resolve();
+          clearInterval(iv); pb.style.width = "100%"; resolve(data.filename || `video_${taskId}.mp4`);
         } else if (data.status === "error") {
           clearInterval(iv); reject(new Error(data.error || "Ошибка сервера"));
         }
