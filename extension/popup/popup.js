@@ -184,7 +184,9 @@ async function startDownload(video, height, card) {
     
     console.log("[DEBUG] Sending download request:", {
       url: video.url,
-      title: video.pageTitle,
+      originalTitle: video.pageTitle,
+      cleanedTitle: cleanTitle(video.pageTitle),
+      type: video.type,
       height: selectedHeight
     });
 
@@ -295,7 +297,18 @@ function setDlState(btn, cls, text) {
 
 function cleanTitle(t) {
   if (!t) return "video";
-  return t.replace(/\s*[|–—-]\s*[^|–—-]+$/, "").trim() || t;
+  
+  // Убираем только явные мусорные части
+  let cleaned = t
+    .replace(/\s*[|]\s*[^|]+$/, "")  // убирает "| что-то" в конце
+    .replace(/\s*—\s*YouTube\s*$/i, "")  // убирает "— YouTube"
+    .replace(/\s*-\s*YouTube\s*$/i, "")  // убирает "- YouTube"
+    .replace(/\s*\|\s*GetCourse\s*$/i, "")  // убирает "| GetCourse"
+    .replace(/\s*-\s*GetCourse\s*$/i, "")  // убирает "- GetCourse"
+    .trim();
+  
+  // Если осталось слишком короткое - возвращаем оригинал
+  return cleaned.length > 5 ? cleaned : t;
 }
 
 function esc(s) {
