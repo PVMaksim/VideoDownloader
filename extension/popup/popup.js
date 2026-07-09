@@ -43,8 +43,12 @@ function updateFooter() {
     el.innerHTML = `🔑 <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
   } else {
-    el.textContent = "🟢 " + new URL(backendUrl).hostname;
-    el.style.color = "var(--green)";
+    // Показываем email пользователя
+    chrome.storage.local.get(["userEmail"], (result) => {
+      const email = result.userEmail || "user@example.com";
+      el.textContent = "👤 " + email;
+      el.style.color = "var(--green)";
+    });
   }
 }
 
@@ -121,13 +125,6 @@ function buildCard(video) {
         </svg>
         Скачать
       </button>
-      <button class="btn btn-open" title="Открыть">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
-          <polyline points="15 3 21 3 21 9"/>
-          <line x1="10" y1="14" x2="21" y2="3"/>
-        </svg>
-      </button>
     </div>
     <div class="progress-wrap" id="pw-${video.id}">
       <div class="progress-bar-bg">
@@ -154,9 +151,6 @@ function buildCard(video) {
     startDownload(video, PAGE_PLATFORMS.has(video.type) ? null : selectedHeight, card);
   });
 
-  card.querySelector(".btn-open").addEventListener("click", () => {
-    chrome.tabs.create({ url: video.url });
-  });
 
   return card;
 }
@@ -225,31 +219,21 @@ async function startDownload(video, height, card) {
     
     try {
         const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-        console.log("[DEBUG] Attempting to fetch file from:", fileUrl);
+        console.log("[DEBUG] Using Chrome Downloads API for:", fileUrl);
         
-        const fileRes = await fetch(fileUrl, {
-            headers: { "Authorization": `Bearer ${token}` }
+        // Используем Chrome Downloads API для фоновой загрузки
+        chrome.downloads.download({
+          url: `${fileUrl}?token=${token}`,
+          filename: filename,
+          saveAs: true,
+          conflictAction: "uniquify"
+        }, (downloadId) => {
+          if (chrome.runtime.lastError) {
+            console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
+            throw new Error("Ошибка при запуске скачивания");
+          }
+          console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
         });
-        
-        console.log("[DEBUG] Server responded with status:", fileRes.status);
-        
-        if (!fileRes.ok) {
-            const errText = await fileRes.text();
-            throw new Error(`Server Error ${fileRes.status}: ${errText}`);
-        }
-
-        const blob = await fileRes.blob();
-        console.log("[DEBUG] File downloaded to memory. Size:", blob.size, "bytes");
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        console.log("[DEBUG] Save dialog triggered successfully.");
     } catch (err) {
         console.error("[ERROR] Download process failed:", err);
         throw new Error("Не удалось скачать файл на устройство: " + err.message);

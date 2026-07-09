@@ -153,14 +153,17 @@ class AuthForm extends HTMLElement {
       console.log('📦 Response data:', { ...d, access_token: d.access_token ? '***' : 'missing' });
       if (!r.ok) throw new Error(d.detail);
       
-      // 🔐 Надёжное сохранение токена с подтверждением
+      // 🔐 Надёжное сохранение токена и email с подтверждением
       await new Promise((resolve, reject) => {
-        chrome.storage.local.set({ token: d.access_token }, () => {
+        chrome.storage.local.set({ 
+          token: d.access_token,
+          userEmail: email  // сохраняем email
+        }, () => {
           if (chrome.runtime.lastError) {
             console.error('❌ Storage error:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
           } else {
-            console.log('💾 Token saved');
+            console.log('💾 Token and email saved');
             console.log('✅ Storage resolved');
             resolve();
           }
