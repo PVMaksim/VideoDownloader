@@ -1,10 +1,8 @@
 let selectedHeight = 1080;
-// VideoGrab — Popup v1.0 (JWT auth)
-
 const QUALITIES = [
-  { label: "360p",  height: 360,  sub: "360p" },
-  { label: "480p",  height: 480,  sub: "480p" },
-  { label: "720p",  height: 720,  sub: "HD"   },
+  { label: "360p", height: 360, sub: "360p" },
+  { label: "480p", height: 480, sub: "480p" },
+  { label: "720p", height: 720, sub: "HD" },
   { label: "1080p", height: 1080, sub: "Full HD" },
 ];
 
@@ -175,9 +173,7 @@ async function startDownload(video, height, card) {
 
     console.log("[DEBUG] Sending download request:", {
       url: video.url,
-      originalTitle: video.pageTitle,
-      cleanedTitle: cleanTitle(video.pageTitle),
-      type: video.type,
+      title: video.pageTitle,
       height: selectedHeight
     });
 
@@ -209,7 +205,15 @@ async function startDownload(video, height, card) {
     pt.textContent = "Скачивается на сервере...";
 
     const filename = await pollStatus(task_id, pb, pt, pp);
-    console.log("[DEBUG] Polling finished! Filename:", filename);
+    console.log("[DEBUG] Polling finished! Filename from server:", filename);
+
+    // Очищаем filename для Chrome Downloads API
+    const cleanFilename = filename
+      .replace(/[<>:"/\\|?*]/g, '') // убираем недопустимые символы
+      .replace(/\s+/g, ' ')          // заменяем множественные пробелы
+      .trim();
+    
+    console.log("[DEBUG] Cleaned filename for download:", cleanFilename);
 
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
@@ -217,13 +221,13 @@ async function startDownload(video, height, card) {
 
       chrome.downloads.download({
         url: `${fileUrl}?token=${token}`,
-        filename: filename,
+        filename: cleanFilename,
         saveAs: true,
         conflictAction: "uniquify"
       }, (downloadId) => {
         if (chrome.runtime.lastError) {
           console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
-          throw new Error("Ошибка при запуске скачивания");
+          throw new Error("Ошибка при запуске скачивания: " + chrome.runtime.lastError.message);
         }
         console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
       });
@@ -263,18 +267,26 @@ async function pollStatus(taskId, pb, pt, pp) {
           headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json();
+        console.log("[POLL] Status response:", data);
+        
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
         pp.textContent = pct + "%";
+        
         if (["ready", "completed", "success"].includes(data.status)) {
           clearInterval(iv);
           pb.style.width = "100%";
-          resolve(data.filename || `video_${taskId}.mp4`);
+          const filename = data.filename || `video_${taskId}.mp4`;
+          console.log("[POLL] Resolving with filename:", filename);
+          resolve(filename);
         } else if (data.status === "error") {
           clearInterval(iv);
           reject(new Error(data.error || "Ошибка сервера"));
         }
-      } catch(e) { clearInterval(iv); reject(e); }
+      } catch(e) { 
+        clearInterval(iv); 
+        reject(e); 
+      }
     }, 1500);
   });
 }
@@ -290,24 +302,17 @@ function setDlState(btn, cls, text) {
 
 function cleanTitle(t) {
   if (!t) return "video";
-  let cleaned = t
-    .replace(/\s*[|]\s*[^|]+$/, "")
-    .replace(/\s*—\s*YouTube\s*$/i, "")
-    .replace(/\s*-\s*YouTube\s*$/i, "")
-    .replace(/\s*\|\s*GetCourse\s*$/i, "")
-    .replace(/\s*-\s*GetCourse\s*$/i, "")
-    .trim();
-  return cleaned.length > 5 ? cleaned : t;
+  return t.replace(/\s*[|–—-]\s*[^|–—-]+$/, "").trim() || t;
 }
 
 function esc(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('.qbtn');
   if (btn) {
-    selectedHeight = parseInt(btn.dataset.height) || 1080;
+    selectedHeight = parseInt(btn.dataset.h) || 1080;
     const card = btn.closest('.card');
     if (card) {
       card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
