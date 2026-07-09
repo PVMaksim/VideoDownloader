@@ -205,18 +205,11 @@ async function startDownload(video, height, card) {
     pt.textContent = "Скачивается на сервере...";
 
     const filename = await pollStatus(task_id, pb, pt, pp);
-    console.log("[DEBUG] Polling finished! Filename from server:", filename);
-
-    const cleanFilename = filename
-      .replace(/[<>:"/\\|?*]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    console.log("[DEBUG] Cleaned filename for download:", cleanFilename);
+    console.log("[DEBUG] Polling finished! Filename:", filename);
 
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Fetching file with auth header:", fileUrl);
+      console.log("[DEBUG] Fetching file:", fileUrl);
 
       const fileRes = await fetch(fileUrl, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -229,20 +222,20 @@ async function startDownload(video, height, card) {
       }
 
       const blob = await fileRes.blob();
-      console.log("[DEBUG] File blob size:", blob.size, "bytes");
+      console.log("[DEBUG] File size:", blob.size, "bytes");
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = cleanFilename;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
 
-      console.log("[DOWNLOAD] File download triggered successfully");
+      console.log("[DOWNLOAD] Success");
     } catch (err) {
-      console.error("[ERROR] Download process failed:", err);
+      console.error("[ERROR] Download failed:", err);
       throw new Error("Не удалось скачать файл: " + err.message);
     }
 
@@ -277,7 +270,7 @@ async function pollStatus(taskId, pb, pt, pp) {
           headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json();
-        console.log("[POLL] Status response:", data);
+        console.log("[POLL] Status:", data.status, "Progress:", data.progress);
         
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
@@ -286,9 +279,7 @@ async function pollStatus(taskId, pb, pt, pp) {
         if (["ready", "completed", "success"].includes(data.status)) {
           clearInterval(iv);
           pb.style.width = "100%";
-          const filename = data.filename || `video_${taskId}.mp4`;
-          console.log("[POLL] Resolving with filename:", filename);
-          resolve(filename);
+          resolve(data.filename || `video_${taskId}.mp4`);
         } else if (data.status === "error") {
           clearInterval(iv);
           reject(new Error(data.error || "Ошибка сервера"));
@@ -328,6 +319,6 @@ document.addEventListener('click', e => {
       card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
     }
     btn.classList.add('active');
-    console.log("[QUALITY] Выбрано качество:", selectedHeight);
+    console.log("[QUALITY] Selected:", selectedHeight);
   }
 });
