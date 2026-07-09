@@ -1,7 +1,6 @@
 let selectedHeight = 1080;
 // VideoGrab — Popup v1.0 (JWT auth)
 
-
 const QUALITIES = [
   { label: "360p",  height: 360,  sub: "360p" },
   { label: "480p",  height: 480,  sub: "480p" },
@@ -23,10 +22,8 @@ let token = "";
 document.addEventListener("DOMContentLoaded", async () => {
   const s = await chrome.storage.local.get(["token"]);
   token = s.token || "";
-
   updateFooter();
   loadVideos();
-
   document.getElementById("btnRefresh").addEventListener("click", loadVideos);
   document.getElementById("btnClear").addEventListener("click", () =>
     chrome.runtime.sendMessage({ type: "CLEAR_VIDEOS" }, loadVideos));
@@ -43,7 +40,6 @@ function updateFooter() {
     el.innerHTML = `🔑 <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
   } else {
-    // Показываем email пользователя
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
       el.textContent = "👤 " + email;
@@ -54,9 +50,7 @@ function updateFooter() {
 
 function loadVideos() {
   document.getElementById("statusText").textContent = "Сканирую...";
-  document.getElementById("content").innerHTML =
-    `<div class="loading"><div class="spinner"></div>загрузка...</div>`;
-
+  document.getElementById("content").innerHTML = `<div class="loading"><div class="spinner"></div>загрузка...</div>`;
   chrome.runtime.sendMessage({ type: "GET_VIDEOS" }, (res) => {
     const videos = res?.videos || [];
     videos.length === 0 ? renderEmpty() : renderList(videos);
@@ -93,7 +87,6 @@ function buildCard(video) {
   const platform = PLATFORM_LABELS[video.type] || "Видео";
   const title = cleanTitle(video.pageTitle);
   const isHls = HLS_PLATFORMS.has(video.type);
-  
 
   const qualityBlock = isHls ? `
     <div class="qlabel">Качество</div>
@@ -151,11 +144,9 @@ function buildCard(video) {
     startDownload(video, PAGE_PLATFORMS.has(video.type) ? null : selectedHeight, card);
   });
 
-
   return card;
 }
 
-// ── Скачивание ────────────────────────────────────────────────────
 async function startDownload(video, height, card) {
   const dlBtn = card.querySelector(".btn-dl");
   const pw = card.querySelector(`#pw-${video.id}`);
@@ -181,7 +172,7 @@ async function startDownload(video, height, card) {
       height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
       format: "best",
     };
-    
+
     console.log("[DEBUG] Sending download request:", {
       url: video.url,
       originalTitle: video.pageTitle,
@@ -190,18 +181,19 @@ async function startDownload(video, height, card) {
       height: selectedHeight
     });
 
-        if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
+    if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
+
     const res = await fetch(`${backendUrl}/api/downloads`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,   // JWT вместо API ключа
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     });
 
     if (res.status === 402) {
-      const data = await res.json(); console.log("[POLL]", data.status, data.progress); console.log("[DEBUG] Статус:", data.status, "Прогресс:", data.progress);
+      const data = await res.json();
       throw new Error(data.detail?.message || "Лимит исчерпан");
     }
     if (res.status === 401 || res.status === 403) {
@@ -218,29 +210,27 @@ async function startDownload(video, height, card) {
 
     const filename = await pollStatus(task_id, pb, pt, pp);
     console.log("[DEBUG] Polling finished! Filename:", filename);
-    
-    try {
-        const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-        console.log("[DEBUG] Using Chrome Downloads API for:", fileUrl);
-        
-        // Используем Chrome Downloads API для фоновой загрузки
-        chrome.downloads.download({
-          url: `${fileUrl}?token=${token}`,
-          filename: filename,
-          saveAs: true,
-          conflictAction: "uniquify"
-        }, (downloadId) => {
-          if (chrome.runtime.lastError) {
-            console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
-            throw new Error("Ошибка при запуске скачивания");
-          }
-          console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
-        });
-    } catch (err) {
-        console.error("[ERROR] Download process failed:", err);
-        throw new Error("Не удалось скачать файл на устройство: " + err.message);
-    } console.log("[DEBUG] Polling завершён, начинаю скачивание на Mac...");
 
+    try {
+      const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
+      console.log("[DEBUG] Using Chrome Downloads API for:", fileUrl);
+
+      chrome.downloads.download({
+        url: `${fileUrl}?token=${token}`,
+        filename: filename,
+        saveAs: true,
+        conflictAction: "uniquify"
+      }, (downloadId) => {
+        if (chrome.runtime.lastError) {
+          console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
+          throw new Error("Ошибка при запуске скачивания");
+        }
+        console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
+      });
+    } catch (err) {
+      console.error("[ERROR] Download process failed:", err);
+      throw new Error("Не удалось скачать файл на устройство: " + err.message);
+    }
 
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
@@ -277,9 +267,12 @@ async function pollStatus(taskId, pb, pt, pp) {
         pb.style.width = pct + "%";
         pp.textContent = pct + "%";
         if (["ready", "completed", "success"].includes(data.status)) {
-          clearInterval(iv); pb.style.width = "100%"; resolve(data.filename || `video_${taskId}.mp4`);
+          clearInterval(iv);
+          pb.style.width = "100%";
+          resolve(data.filename || `video_${taskId}.mp4`);
         } else if (data.status === "error") {
-          clearInterval(iv); reject(new Error(data.error || "Ошибка сервера"));
+          clearInterval(iv);
+          reject(new Error(data.error || "Ошибка сервера"));
         }
       } catch(e) { clearInterval(iv); reject(e); }
     }, 1500);
@@ -297,17 +290,13 @@ function setDlState(btn, cls, text) {
 
 function cleanTitle(t) {
   if (!t) return "video";
-  
-  // Убираем только явные мусорные части
   let cleaned = t
-    .replace(/\s*[|]\s*[^|]+$/, "")  // убирает "| что-то" в конце
-    .replace(/\s*—\s*YouTube\s*$/i, "")  // убирает "— YouTube"
-    .replace(/\s*-\s*YouTube\s*$/i, "")  // убирает "- YouTube"
-    .replace(/\s*\|\s*GetCourse\s*$/i, "")  // убирает "| GetCourse"
-    .replace(/\s*-\s*GetCourse\s*$/i, "")  // убирает "- GetCourse"
+    .replace(/\s*[|]\s*[^|]+$/, "")
+    .replace(/\s*—\s*YouTube\s*$/i, "")
+    .replace(/\s*-\s*YouTube\s*$/i, "")
+    .replace(/\s*\|\s*GetCourse\s*$/i, "")
+    .replace(/\s*-\s*GetCourse\s*$/i, "")
     .trim();
-  
-  // Если осталось слишком короткое - возвращаем оригинал
   return cleaned.length > 5 ? cleaned : t;
 }
 
@@ -315,17 +304,15 @@ function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-
-// Обработчик выбора качества
 document.addEventListener('click', e => {
-    const btn = e.target.closest('.qbtn');
-    if (btn) {
-        selectedHeight = parseInt(btn.dataset.height) || 1080;
-        const card = btn.closest('.card');
-        if (card) {
-            card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
-        }
-        btn.classList.add('active');
-        console.log("[QUALITY] Выбрано качество:", selectedHeight);
+  const btn = e.target.closest('.qbtn');
+  if (btn) {
+    selectedHeight = parseInt(btn.dataset.height) || 1080;
+    const card = btn.closest('.card');
+    if (card) {
+      card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
     }
+    btn.classList.add('active');
+    console.log("[QUALITY] Выбрано качество:", selectedHeight);
+  }
 });
