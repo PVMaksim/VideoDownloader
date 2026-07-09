@@ -126,6 +126,8 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
     safe_title = re.sub(r'\s*-\s*YouTube\s*$', '', safe_title)
     # Убираем лишние пробелы
     safe_title = ' '.join(safe_title.split())
+    # убирает "(1924) " в начале
+    safe_title = re.sub(r'^\(\d+\)\s*', '', safe_title)  
     
     log.info(f"[{task_id}] Название файла: {safe_title}")
     
