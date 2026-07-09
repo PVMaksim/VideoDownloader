@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     showAuth();
   }
 
-  // Слушаем вход через компонент
-  document.addEventListener('auth-login', (e) => {
-    const { token, user } = e.detail;
-    localStorage.setItem('token', token);
-    // Используем user из события, не делаем лишний запрос
-    showProfile(user);
-  });
+// Слушаем вход через компонент
+document.addEventListener('auth-login', (e) => {
+  const { token, user } = e.detail;
+  localStorage.setItem('token', token);
+  
+  // Сохраняем email в chrome.storage для отображения в popup
+  const email = user
 
   // Слушаем регистрацию через компонент
   document.addEventListener('auth-register', (e) => {
