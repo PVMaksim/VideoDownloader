@@ -135,7 +135,7 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
 
     cmd = [
         "yt-dlp",
-        "-f", f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best",
+        "-f", f"bestvideo[height<={height}][vcodec^=avc]+bestaudio[acodec^=mp4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}]/best",
         "-o", str(out_path),
         "--no-playlist",
         "--newline",
@@ -143,6 +143,7 @@ def _run_ytdlp(task_id, video_url, cookies, referer, user_agent, height, title, 
         "--no-warnings",
         "--remote-components", "ejs:github",
         "--ffmpeg-location", "/usr/bin/ffmpeg",
+        "--recode-video", "mp4",
     ]
 
     if cookies:
