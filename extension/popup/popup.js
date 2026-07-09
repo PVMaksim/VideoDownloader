@@ -207,79 +207,43 @@ async function startDownload(video, height, card) {
     const filename = await pollStatus(task_id, pb, pt, pp);
     console.log("[DEBUG] Polling finished! Filename from server:", filename);
 
-    // Очищаем filename для Chrome Downloads API
     const cleanFilename = filename
-      .replace(/[<>:"/\\|?*]/g, '') // убираем недопустимые символы
-      .replace(/\s+/g, ' ')          // заменяем множественные пробелы
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
     
     console.log("[DEBUG] Cleaned filename for download:", cleanFilename);
 
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Downloading file from:", fileUrl);
+      console.log("[DEBUG] Fetching file with auth header:", fileUrl);
 
-      // Сначала проверяем, доступен ли файл
-      const testRes = await fetch(fileUrl, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${token}` },
+      const fileRes = await fetch(fileUrl, {
+        headers: { "Authorization": `Bearer ${token}` }
       });
 
-      if (!testRes.ok) {
-        throw new Error(`Сервер вернул ${testRes.status} при попытке доступа к файлу`);
+      if (!fileRes.ok) {
+        const errorText = await fileRes.text();
+        console.error("[ERROR] Server response:", errorText);
+        throw new Error(`Сервер вернул ${fileRes.status}: ${errorText}`);
       }
 
-      // Проверяем Content-Type
-      const contentType = testRes.headers.get("content-type");
-      console.log("[DEBUG] Content-Type:", contentType);
+      const blob = await fileRes.blob();
+      console.log("[DEBUG] File blob size:", blob.size, "bytes");
 
-      if (contentType && contentType.includes("application/json")) {
-        // Сервер вернул JSON (вероятно, ошибку) вместо видео
-        const errorData = await testRes.json();
-        console.error("[ERROR] Server returned JSON:", errorData);
-        throw new Error("Сервер вернул ошибку вместо файла: " + JSON.stringify(errorData));
-      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = cleanFilename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
 
-      // Если всё OK, используем Chrome Downloads API с правильными заголовками
-      chrome.downloads.download({
-        url: fileUrl,
-        filename: cleanFilename,
-        saveAs: true,
-        conflictAction: "uniquify",
-        headers: [
-          {
-            name: "Authorization",
-            value: `Bearer ${token}`
-          }
-        ]
-      }, (downloadId) => {
-        if (chrome.runtime.lastError) {
-          console.error("[DOWNLOAD ERROR]", chrome.runtime.lastError);
-          throw new Error("Ошибка при запуске скачивания: " + chrome.runtime.lastError.message);
-        }
-        console.log("[DOWNLOAD] Started successfully, ID:", downloadId);
-        
-        // Отслеживаем статус загрузки
-        chrome.downloads.onChanged.addListener(function onDownloadChanged(downloadDelta) {
-          if (downloadDelta.id === downloadId && downloadDelta.state) {
-            if (downloadDelta.state.current === "complete") {
-              console.log("[DOWNLOAD] Completed successfully");
-              chrome.downloads.onChanged.removeListener(onDownloadChanged);
-            } else if (downloadDelta.state.current === "interrupted") {
-              console.error("[DOWNLOAD] Interrupted:", downloadDelta);
-              chrome.downloads.onChanged.removeListener(onDownloadChanged);
-            }
-          }
-        });
-      });
-} catch (err) {
-  console.error("[ERROR] Download process failed:", err);
-  throw new Error("Не удалось скачать файл: " + err.message);
-}
-    
+      console.log("[DOWNLOAD] File download triggered successfully");
     } catch (err) {
       console.error("[ERROR] Download process failed:", err);
-      throw new Error("Не удалось скачать файл на устройство: " + err.message);
+      throw new Error("Не удалось скачать файл: " + err.message);
     }
 
     setDlState(dlBtn, "done", "✓ Готово!");
