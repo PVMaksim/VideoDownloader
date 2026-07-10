@@ -94,6 +94,7 @@ function buildCard(video) {
                 data-h="${q.height}">
           <span class="qr">${q.label}</span>
           <span class="qs">${q.sub}</span>
+          <span class="qsize" id="size-${q.height}">-</span>
         </button>`).join("")}
     </div>` : `
     <div class="quality-auto">
@@ -123,7 +124,7 @@ function buildCard(video) {
       </div>
       <div class="progress-text">
         <span id="pt-${video.id}">Подготовка...</span>
-        <span id="pp-${video.id}">0%</span>
+        <span id="pp-${video.id}">0 MB / 0 MB (0%)</span>
       </div>
     </div>
   `;
@@ -203,10 +204,10 @@ async function startDownload(video, height, card) {
     const filename = await pollStatus(task_id, pb, pt, pp);
     console.log("[DEBUG] Polling finished! Filename:", filename);
 
-    // Скачиваем файл с помощью fetch (не chrome.downloads)
+    // Скачиваем файл на Mac с прогрессом
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Fetching file with auth:", fileUrl);
+      console.log("[DEBUG] Fetching file:", fileUrl);
 
       const fileRes = await fetch(fileUrl, {
         headers: { "Authorization": `Bearer ${token}` }
@@ -218,8 +219,40 @@ async function startDownload(video, height, card) {
         throw new Error(`Сервер вернул ${fileRes.status}: ${errorText}`);
       }
 
-      const blob = await fileRes.blob();
-      console.log("[DEBUG] File blob size:", blob.size, "bytes");
+      // Получаем общий размер файла
+      const contentLength = fileRes.headers.get("content-length");
+      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+      console.log("[DEBUG] Total size:", totalSize, "bytes");
+
+      // Читаем поток с прогрессом
+      const reader = fileRes.body.getReader();
+      let downloaded = 0;
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        chunks.push(value);
+        downloaded += value.length;
+        
+        // Обновляем прогресс
+        if (totalSize > 0) {
+          const percent = Math.round((downloaded / totalSize) * 100);
+          const downloadedMB = (downloaded / (1024 * 1024)).toFixed(1);
+          const totalMB = (totalSize / (1024 * 1024)).toFixed(1);
+          
+          pb.style.width = percent + "%";
+          pp.textContent = `${downloadedMB} MB / ${totalMB} MB (${percent}%)`;
+          pt.textContent = "Скачивается на Mac...";
+          
+          console.log(`[PROGRESS] ${downloadedMB}MB / ${totalMB}MB (${percent}%)`);
+        }
+      }
+
+      // Создаём blob из всех частей
+      const blob = new Blob(chunks);
+      console.log("[DEBUG] Final blob size:", blob.size, "bytes");
 
       // Создаём ссылку для скачивания
       const url = URL.createObjectURL(blob);
@@ -240,6 +273,7 @@ async function startDownload(video, height, card) {
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
     pt.textContent = "Файл скачан";
+    pp.textContent = "";
 
     setTimeout(() => {
       setDlState(dlBtn, "", "Скачать");
@@ -272,7 +306,6 @@ async function pollStatus(taskId, pb, pt, pp) {
         
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
-        pp.textContent = pct + "%";
         
         if (["ready", "completed", "success"].includes(data.status)) {
           clearInterval(iv);
