@@ -13,7 +13,7 @@ from auth.service import get_current_user
 from db.database import get_db
 from db.models import Download, DownloadStatus, Plan, User
 from schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
-from worker.tasks import download_video  # ✅ ИМПОРТ ЗАДАЧИ
+from worker.tasks import download_video
 
 from .service import (
     check_daily_limit,
@@ -73,7 +73,12 @@ async def create_download(
     )
     
     # 3. Возвращаем ответ
-    return DownloadResponse(task_id=download.task_id, status=download.status, video_url=download.video_url, height=download.height)
+    return DownloadResponse(
+        task_id=download.task_id,
+        status=download.status,
+        video_url=download.video_url,
+        height=download.height
+    )
 
 
 @router.get("/status/{task_id}", response_model=StatusResponse)
