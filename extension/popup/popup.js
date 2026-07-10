@@ -40,7 +40,7 @@ function updateFooter() {
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
-      el.textContent = "👤 " + email;
+      el.textContent = " " + email;
       el.style.color = "var(--green)";
     });
   }
@@ -209,7 +209,7 @@ async function startDownload(video, height, card) {
 
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Fetching file:", fileUrl);
+      console.log("[DEBUG] Fetching file with auth:", fileUrl);
 
       const fileRes = await fetch(fileUrl, {
         headers: { "Authorization": `Bearer ${token}` }
