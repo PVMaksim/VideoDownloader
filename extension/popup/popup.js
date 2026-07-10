@@ -32,10 +32,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 function updateFooter() {
   const el = document.getElementById("footerStatus");
   if (!backendUrl) {
-    el.innerHTML = `⚠️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
+    el.innerHTML = `️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
     el.style.color = "var(--muted)";
   } else if (!token) {
-    el.innerHTML = `🔑 <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
+    el.innerHTML = ` <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
@@ -130,9 +130,7 @@ function buildCard(video) {
   `;
 
   if (isHls) {
-    // Получаем размеры для каждого качества
     fetchVideoSizes(video.url, video.id);
-    
     card.querySelectorAll(".qbtn").forEach(btn => {
       btn.addEventListener("click", () => {
         card.querySelectorAll(".qbtn").forEach(b => b.classList.remove("sel"));
@@ -151,8 +149,7 @@ function buildCard(video) {
 
 async function fetchVideoSizes(videoUrl, videoId) {
   try {
-    // Запрашиваем информацию о форматах с бэкенда
-    const res = await fetch(`${backendUrl}/api/downloads/info`, {
+    const res = await fetch(`${backendUrl}/api/downloads/sizes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -165,7 +162,6 @@ async function fetchVideoSizes(videoUrl, videoId) {
     
     const data = await res.json();
     
-    // Обновляем размеры для каждого качества
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
@@ -244,7 +240,6 @@ async function startDownload(video, height, card) {
     const filename = await pollStatus(task_id, pb, pt, pp);
     console.log("[DEBUG] Polling finished! Filename:", filename);
 
-    // Скачиваем файл на Mac с прогрессом
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
       console.log("[DEBUG] Fetching file:", fileUrl);
@@ -259,12 +254,10 @@ async function startDownload(video, height, card) {
         throw new Error(`Сервер вернул ${fileRes.status}: ${errorText}`);
       }
 
-      // Получаем общий размер файла
       const contentLength = fileRes.headers.get("content-length");
       const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
       console.log("[DEBUG] Total size:", totalSize, "bytes");
 
-      // Читаем поток с прогрессом
       const reader = fileRes.body.getReader();
       let downloaded = 0;
       const chunks = [];
@@ -276,7 +269,6 @@ async function startDownload(video, height, card) {
         chunks.push(value);
         downloaded += value.length;
         
-        // Обновляем прогресс
         if (totalSize > 0) {
           const percent = Math.round((downloaded / totalSize) * 100);
           const downloadedMB = (downloaded / (1024 * 1024)).toFixed(1);
@@ -290,11 +282,9 @@ async function startDownload(video, height, card) {
         }
       }
 
-      // Создаём blob из всех частей
       const blob = new Blob(chunks);
       console.log("[DEBUG] Final blob size:", blob.size, "bytes");
 
-      // Создаём ссылку для скачивания
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
