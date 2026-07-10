@@ -171,11 +171,7 @@ async function startDownload(video, height, card) {
       format: "best",
     };
 
-    console.log("[DEBUG] Sending download request:", {
-      url: video.url,
-      title: video.pageTitle,
-      height: selectedHeight
-    });
+    console.log("[DEBUG] Sending download request:", body);
 
     if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
 
@@ -207,6 +203,7 @@ async function startDownload(video, height, card) {
     const filename = await pollStatus(task_id, pb, pt, pp);
     console.log("[DEBUG] Polling finished! Filename:", filename);
 
+    // Скачиваем файл с помощью fetch (не chrome.downloads)
     try {
       const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
       console.log("[DEBUG] Fetching file with auth:", fileUrl);
@@ -222,8 +219,9 @@ async function startDownload(video, height, card) {
       }
 
       const blob = await fileRes.blob();
-      console.log("[DEBUG] File size:", blob.size, "bytes");
+      console.log("[DEBUG] File blob size:", blob.size, "bytes");
 
+      // Создаём ссылку для скачивания
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -233,7 +231,7 @@ async function startDownload(video, height, card) {
       a.remove();
       URL.revokeObjectURL(url);
 
-      console.log("[DOWNLOAD] Success");
+      console.log("[DOWNLOAD] Success!");
     } catch (err) {
       console.error("[ERROR] Download failed:", err);
       throw new Error("Не удалось скачать файл: " + err.message);
