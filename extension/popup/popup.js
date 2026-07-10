@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 function updateFooter() {
   const el = document.getElementById("footerStatus");
   if (!backendUrl) {
-    el.innerHTML = `️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
+    el.innerHTML = `⚠️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
     el.style.color = "var(--muted)";
   } else if (!token) {
     el.innerHTML = ` <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
@@ -40,7 +40,7 @@ function updateFooter() {
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
-      el.textContent = " " + email;
+      el.textContent = "👤 " + email;
       el.style.color = "var(--green)";
     });
   }
@@ -157,29 +157,23 @@ async function fetchVideoSizes(videoUrl, videoId) {
       },
       body: JSON.stringify({ video_url: videoUrl }),
     });
-    
     if (!res.ok) return;
-    
     const data = await res.json();
-    
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
         const size = data.sizes[q.height];
-        if (size) {
-          sizeEl.textContent = formatSize(size);
-        }
+        if (size) sizeEl.textContent = formatSize(size);
       }
     });
   } catch (err) {
-    console.log("[INFO] Could not fetch video sizes:", err.message);
+    console.log("[INFO] Could not fetch sizes:", err.message);
   }
 }
 
 function formatSize(bytes) {
   if (!bytes || bytes === 0) return "-";
-  const mb = bytes / (1024 * 1024);
-  return mb.toFixed(1) + " MB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
 async function startDownload(video, height, card) {
@@ -208,16 +202,11 @@ async function startDownload(video, height, card) {
       format: "best",
     };
 
-    console.log("[DEBUG] Sending download request:", body);
-
     if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
 
     const res = await fetch(`${backendUrl}/api/downloads`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify(body),
     });
 
@@ -229,7 +218,7 @@ async function startDownload(video, height, card) {
       token = "";
       await chrome.storage.local.remove("token");
       updateFooter();
-      throw new Error("Сессия истекла — войди снова в настройках");
+      throw new Error("Сессия истекла");
     }
     if (!res.ok) throw new Error(`Сервер вернул ${res.status}`);
 
@@ -238,67 +227,47 @@ async function startDownload(video, height, card) {
     pt.textContent = "Скачивается на сервере...";
 
     const filename = await pollStatus(task_id, pb, pt, pp);
-    console.log("[DEBUG] Polling finished! Filename:", filename);
 
-    try {
-      const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-      console.log("[DEBUG] Fetching file:", fileUrl);
+    const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
+    const fileRes = await fetch(fileUrl, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
 
-      const fileRes = await fetch(fileUrl, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-
-      if (!fileRes.ok) {
-        const errorText = await fileRes.text();
-        console.error("[ERROR] Server response:", errorText);
-        throw new Error(`Сервер вернул ${fileRes.status}: ${errorText}`);
-      }
-
-      const contentLength = fileRes.headers.get("content-length");
-      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
-      console.log("[DEBUG] Total size:", totalSize, "bytes");
-
-      const reader = fileRes.body.getReader();
-      let downloaded = 0;
-      const chunks = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        chunks.push(value);
-        downloaded += value.length;
-        
-        if (totalSize > 0) {
-          const percent = Math.round((downloaded / totalSize) * 100);
-          const downloadedMB = (downloaded / (1024 * 1024)).toFixed(1);
-          const totalMB = (totalSize / (1024 * 1024)).toFixed(1);
-          
-          pb.style.width = percent + "%";
-          pp.textContent = `${downloadedMB} MB / ${totalMB} MB (${percent}%)`;
-          pt.textContent = "Скачивается на Mac...";
-          
-          console.log(`[PROGRESS] ${downloadedMB}MB / ${totalMB}MB (${percent}%)`);
-        }
-      }
-
-      const blob = new Blob(chunks);
-      console.log("[DEBUG] Final blob size:", blob.size, "bytes");
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      console.log("[DOWNLOAD] Success!");
-    } catch (err) {
-      console.error("[ERROR] Download failed:", err);
-      throw new Error("Не удалось скачать файл: " + err.message);
+    if (!fileRes.ok) {
+      throw new Error(`Сервер вернул ${fileRes.status}`);
     }
+
+    const contentLength = fileRes.headers.get("content-length");
+    const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+
+    const reader = fileRes.body.getReader();
+    let downloaded = 0;
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      downloaded += value.length;
+      if (totalSize > 0) {
+        const percent = Math.round((downloaded / totalSize) * 100);
+        const dMB = (downloaded / (1024 * 1024)).toFixed(1);
+        const tMB = (totalSize / (1024 * 1024)).toFixed(1);
+        pb.style.width = percent + "%";
+        pp.textContent = `${dMB} MB / ${tMB} MB (${percent}%)`;
+        pt.textContent = "Скачивается на Mac...";
+      }
+    }
+
+    const blob = new Blob(chunks);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
@@ -332,11 +301,8 @@ async function pollStatus(taskId, pb, pt, pp) {
           headers: { "Authorization": `Bearer ${token}` },
         });
         const data = await res.json();
-        console.log("[POLL] Status:", data.status, "Progress:", data.progress);
-        
         const pct = Math.round(data.progress || 0);
         pb.style.width = pct + "%";
-        
         if (["ready", "completed", "success"].includes(data.status)) {
           clearInterval(iv);
           pb.style.width = "100%";
@@ -345,10 +311,7 @@ async function pollStatus(taskId, pb, pt, pp) {
           clearInterval(iv);
           reject(new Error(data.error || "Ошибка сервера"));
         }
-      } catch(e) { 
-        clearInterval(iv); 
-        reject(e); 
-      }
+      } catch(e) { clearInterval(iv); reject(e); }
     }, 1500);
   });
 }
@@ -380,6 +343,5 @@ document.addEventListener('click', e => {
       card.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
     }
     btn.classList.add('active');
-    console.log("[QUALITY] Selected:", selectedHeight);
   }
 });
