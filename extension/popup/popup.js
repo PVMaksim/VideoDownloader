@@ -35,7 +35,7 @@ function updateFooter() {
     el.innerHTML = `⚠️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
     el.style.color = "var(--muted)";
   } else if (!token) {
-    el.innerHTML = `<a onclick="chrome.runtime.openOptionsPage()">🔑 войди в аккаунт</a>`;
+    el.innerHTML = ` <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
