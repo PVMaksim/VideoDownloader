@@ -94,7 +94,7 @@ function buildCard(video) {
                 data-h="${q.height}">
           <span class="qr">${q.label}</span>
           <span class="qs">${q.sub}</span>
-          <span class="qsize" id="size-${q.height}">-</span>
+          <span class="qsize" id="size-${video.id}-${q.height}">-</span>
         </button>`).join("")}
     </div>` : `
     <div class="quality-auto">
@@ -130,6 +130,9 @@ function buildCard(video) {
   `;
 
   if (isHls) {
+    // Получаем размеры для каждого качества
+    fetchVideoSizes(video.url, video.id);
+    
     card.querySelectorAll(".qbtn").forEach(btn => {
       btn.addEventListener("click", () => {
         card.querySelectorAll(".qbtn").forEach(b => b.classList.remove("sel"));
@@ -144,6 +147,43 @@ function buildCard(video) {
   });
 
   return card;
+}
+
+async function fetchVideoSizes(videoUrl, videoId) {
+  try {
+    // Запрашиваем информацию о форматах с бэкенда
+    const res = await fetch(`${backendUrl}/api/downloads/info`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ video_url: videoUrl }),
+    });
+    
+    if (!res.ok) return;
+    
+    const data = await res.json();
+    
+    // Обновляем размеры для каждого качества
+    QUALITIES.forEach(q => {
+      const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
+      if (sizeEl && data.sizes) {
+        const size = data.sizes[q.height];
+        if (size) {
+          sizeEl.textContent = formatSize(size);
+        }
+      }
+    });
+  } catch (err) {
+    console.log("[INFO] Could not fetch video sizes:", err.message);
+  }
+}
+
+function formatSize(bytes) {
+  if (!bytes || bytes === 0) return "-";
+  const mb = bytes / (1024 * 1024);
+  return mb.toFixed(1) + " MB";
 }
 
 async function startDownload(video, height, card) {
