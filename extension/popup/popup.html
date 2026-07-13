@@ -84,7 +84,6 @@
     .empty h3 { font-size: 13px; font-weight: 600; }
     .empty p { font-size: 11px; color: var(--muted); line-height: 1.5; max-width: 210px; }
 
-    /* Настройки не заданы */
     .setup-hint {
       margin: 12px; padding: 10px 12px;
       background: rgba(99,102,241,.08);
@@ -136,6 +135,7 @@
     }
     .qbtn .qr { font-size: 11px; font-weight: 600; }
     .qbtn .qs { font-size: 9px; opacity: .55; }
+    .qbtn .qsize { font-size: 8px; opacity: .7; margin-top: 2px; }
     .qbtn:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.07); }
     .qbtn.sel { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.13); }
     .qbtn.best { border-color: var(--border); color: var(--muted); }
@@ -167,7 +167,6 @@
     }
     .btn-open:hover { color: var(--text); border-color: #3a3a45; }
 
-    /* Прогресс-бар */
     .progress-wrap {
       margin-top: 8px;
       display: none;
@@ -203,6 +202,23 @@
       border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 10px;
     }
     @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* Цвета тегов платформ */
+    .tag-youtube   { color: #ff4444; background: rgba(255,68,68,.12); }
+    .tag-instagram { color: #e1306c; background: rgba(225,48,108,.12); }
+    .tag-vk        { color: #4a76a8; background: rgba(74,118,168,.12); }
+    .tag-getcourse { color: var(--accent); background: rgba(99,102,241,.12); }
+    .tag-kinescope { color: var(--accent); background: rgba(99,102,241,.12); }
+
+    /* Авто-качество для YouTube/VK/Instagram */
+    .quality-auto {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--green);
+      background: rgba(34,197,94,.08);
+      border: 1px solid rgba(34,197,94,.2);
+      border-radius: 6px; padding: 5px 8px;
+      margin-bottom: 9px;
+    }
   </style>
 </head>
 <body>
@@ -251,21 +267,3 @@
   <script src="popup.js"></script>
 </body>
 </html>
-<style>
-/* Цвета тегов платформ */
-.tag-youtube   { color: #ff4444; background: rgba(255,68,68,.12); }
-.tag-instagram { color: #e1306c; background: rgba(225,48,108,.12); }
-.tag-vk        { color: #4a76a8; background: rgba(74,118,168,.12); }
-.tag-getcourse { color: var(--accent); background: rgba(99,102,241,.12); }
-.tag-kinescope { color: var(--accent); background: rgba(99,102,241,.12); }
-
-/* Авто-качество для YouTube/VK/Instagram */
-.quality-auto {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: var(--green);
-  background: rgba(34,197,94,.08);
-  border: 1px solid rgba(34,197,94,.2);
-  border-radius: 6px; padding: 5px 8px;
-  margin-bottom: 9px;
-}
-</style>
