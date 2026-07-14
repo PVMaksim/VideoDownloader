@@ -157,17 +157,31 @@ async function fetchVideoSizes(videoUrl, videoId) {
       },
       body: JSON.stringify({ video_url: videoUrl }),
     });
-    if (!res.ok) return;
+    
+    if (!res.ok) {
+      console.warn(`Sizes API returned ${res.status}`);
+      return;
+    }
+    
     const data = await res.json();
+    console.log('[SIZE] Received:', data);
+    
+    // Обновляем размеры для каждого качества
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
         const size = data.sizes[q.height];
-        if (size) sizeEl.textContent = formatSize(size);
+        if (size) {
+          sizeEl.textContent = formatSize(size);
+          sizeEl.style.color = "var(--green)";
+        } else {
+          sizeEl.textContent = "недоступно";
+          sizeEl.style.color = "var(--muted)";
+        }
       }
     });
   } catch (err) {
-    console.log("[INFO] Could not fetch sizes:", err.message);
+    console.error("[ERROR] Could not fetch sizes:", err);
   }
 }
 

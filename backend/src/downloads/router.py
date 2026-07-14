@@ -14,6 +14,7 @@ from db.database import get_db
 from db.models import Download, DownloadStatus, Plan, User
 from schemas.downloads import DownloadRequest, DownloadResponse, HistoryItem, StatusResponse
 from worker.tasks import download_video
+from fastapi import HTTPException
 
 from .service import (
     check_daily_limit,
@@ -141,3 +142,58 @@ async def get_stats(
     db: AsyncSession = Depends(get_db)
 ):
     return await get_user_download_stats(db, current_user)
+
+
+@router.post("/sizes")
+async def get_video_sizes(
+    req: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """Получить размеры видео для доступных качеств"""
+    import yt_dlp
+    import asyncio
+    
+    video_url = req.get("video_url")
+    if not video_url:
+        raise HTTPException(status_code=400, detail="video_url required")
+    
+    # Запускаем yt-dlp в потоке (blocking operation)
+    def get_formats():
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': False,
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                return info
+        except Exception as e:
+            print(f"Error extracting info: {e}")
+            return None
+    
+    # Выполняем в отдельном потоке
+    loop = asyncio.get_event_loop()
+    info = await loop.run_in_executor(None, get_formats)
+    
+    if not info:
+        return {"sizes": {}}
+    
+    # Группируем форматы по высоте и находим максимальный размер
+    sizes = {}
+    qualities = [360, 480, 720, 1080, 1440, 2160]
+    
+    for height in qualities:
+        # Ищем все форматы с этой высотой
+        formats = info.get('formats', [])
+        relevant_formats = [
+            f for f in formats 
+            if f.get('height') == height and f.get('filesize')
+        ]
+        
+        if relevant_formats:
+            # Берём максимальный размер (лучшее качество для этой высоты)
+            max_size = max(f['filesize'] for f in relevant_formats)
+            sizes[height] = max_size
+    
+    return {"sizes": sizes}
