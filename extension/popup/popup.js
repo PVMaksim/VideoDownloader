@@ -159,14 +159,16 @@ async function fetchVideoSizes(videoUrl, videoId) {
     });
     
     if (!res.ok) {
-      console.warn(`Sizes API returned ${res.status}`);
+      console.error(`[SIZE] API error: ${res.status} ${res.statusText}`);
+      if (res.status === 404) {
+        console.error('[SIZE] Endpoint /api/downloads/sizes not found!');
+      }
       return;
     }
     
     const data = await res.json();
     console.log('[SIZE] Received:', data);
     
-    // Обновляем размеры для каждого качества
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
@@ -181,7 +183,7 @@ async function fetchVideoSizes(videoUrl, videoId) {
       }
     });
   } catch (err) {
-    console.error("[ERROR] Could not fetch sizes:", err);
+    console.error("[SIZE] Error:", err);
   }
 }
 
