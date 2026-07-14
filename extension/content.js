@@ -11,15 +11,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendRes) => {
   }
 });
 
-// Наблюдаем за DOM
-const observer = new MutationObserver(() => {
-  detectVideos();
-});
+// Функция инициализации наблюдателя
+function initObserver() {
+  if (!document.body) {
+    console.warn('[VideoDetector] document.body is null, retrying...');
+    setTimeout(initObserver, 100);
+    return;
+  }
 
-observer.observe(document.body, { childList: true, subtree: true });
+  const observer = new MutationObserver(() => {
+    detectVideos();
+  });
 
-// Первичное обнаружение
-setTimeout(detectVideos, 1000);
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  // Первичное обнаружение
+  setTimeout(detectVideos, 1000);
+}
+
+// Запускаем наблюдатель
+initObserver();
 
 function detectVideos() {
   const url = location.href;

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "VideoDownloader",
   "version": "1.0.3",
-  "description": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u0439 \u0432\u0438\u0434\u0435\u043e \u0441 GetCourse \u0438 \u0434\u0440\u0443\u0433\u0438\u0445 \u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c",
+  "description": "Скачивай видео с GetCourse и других платформ",
   "permissions": [
     "webRequest",
     "cookies",
@@ -15,11 +15,11 @@
     "downloads"
   ],
   "host_permissions": [
-   "https://videodownloader.neoxis.store:8450/*",
-  "http://localhost:8000/*",
-  "<all_urls>",
-  "http://localhost:8201/*",
-  "http://127.0.0.1:8201/*"
+    "https://videodownloader.neoxis.store:8450/",
+    "http://localhost:8000/",
+    "<all_urls>",
+    "http://localhost:8201/",
+    "http://127.0.0.1:8201/"
   ],
   "background": {
     "service_worker": "background.js"
@@ -35,13 +35,9 @@
   "options_page": "options/options.html",
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_start",
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
       "world": "ISOLATED"
     }
   ],
@@ -52,16 +48,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "lib/*.html"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["lib/*.html"],
+      "matches": ["<all_urls>"]
     }
   ],
-
- "content_security_policy": {
-   "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store"
- }
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store"
+  }
 }
