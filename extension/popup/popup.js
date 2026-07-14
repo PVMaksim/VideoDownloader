@@ -147,8 +147,11 @@ function buildCard(video) {
   return card;
 }
 
-async function fetchVideoSizes(videoUrl, videoId) {
+async function async function fetchVideoSizes(videoUrl, videoId) {
   try {
+    console.log(`[SIZE] 📡 Запрос к: ${backendUrl}/api/downloads/sizes`);
+    console.log(`[SIZE] 🔑 Токен присутствует?`, !!token);
+
     const res = await fetch(`${backendUrl}/api/downloads/sizes`, {
       method: "POST",
       headers: {
@@ -157,18 +160,22 @@ async function fetchVideoSizes(videoUrl, videoId) {
       },
       body: JSON.stringify({ video_url: videoUrl }),
     });
-    
+
     if (!res.ok) {
-      console.error(`[SIZE] API error: ${res.status} ${res.statusText}`);
-      if (res.status === 404) {
-        console.error('[SIZE] Endpoint /api/downloads/sizes not found!');
+      const errorText = await res.text();
+      console.error(`[SIZE] ❌ Ошибка HTTP ${res.status}:`, errorText);
+      
+      if (res.status === 401) {
+        console.error("[SIZE] ⚠️ Токен недействителен или истёк. Войди в аккаунт в настройках.");
+      } else if (res.status === 404) {
+        console.error("[SIZE] ⚠️ Эндпоинт /sizes не найден на сервере. Проверь, запущен ли правильный бэкенд.");
       }
       return;
     }
-    
+
     const data = await res.json();
-    console.log('[SIZE] Received:', data);
-    
+    console.log(`[SIZE] ✅ Ответ от сервера:`, data);
+
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
@@ -183,7 +190,7 @@ async function fetchVideoSizes(videoUrl, videoId) {
       }
     });
   } catch (err) {
-    console.error("[SIZE] Error:", err);
+    console.error("[SIZE] 🚨 Сетевая ошибка (возможно, CORS или сервер недоступен):", err);
   }
 }
 
