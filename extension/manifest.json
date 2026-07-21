@@ -19,7 +19,8 @@
     "http://localhost:8000/",
     "<all_urls>",
     "http://localhost:8301/",
-    "http://127.0.0.1:8301/"
+    "http://127.0.0.1:8301/",
+    "http://193.242.109.48:8301/"
   ],
   "background": {
     "service_worker": "background.js"
@@ -53,6 +54,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store http://localhost:8301"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://videodownloader.neoxis.store:8450 https://neoxis.store http://localhost:8301 http://193.242.109.48:8301"
   }
 }

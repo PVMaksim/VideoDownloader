@@ -5,16 +5,17 @@ const QUALITIES = [
   { label: "720p", height: 720, sub: "HD" },
   { label: "1080p", height: 1080, sub: "Full HD" },
 ];
-
 const PLATFORM_LABELS = {
   getcourse: "GetCourse", kinescope: "Kinescope",
   youtube: "YouTube", instagram: "Instagram", vk: "VK", hls: "HLS",
 };
-
 const HLS_PLATFORMS = new Set(["getcourse", "kinescope", "hls", "youtube", "instagram", "vk"]);
 const PAGE_PLATFORMS = new Set(["youtube", "instagram", "vk"]);
 
-const backendUrl = "http://localhost:8301";
+// УКАЖИ НУЖНЫЙ АДРЕС:
+const backendUrl = "http://193.242.109.48:8301";
+// или для локального: const backendUrl = "http://localhost:8301";
+
 let token = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -40,7 +41,7 @@ function updateFooter() {
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
-      el.textContent = "  " + email;
+      el.textContent = "👤 " + email;
       el.style.color = "var(--green)";
     });
   }
@@ -57,17 +58,7 @@ function loadVideos() {
 
 function renderEmpty() {
   document.getElementById("statusText").textContent = "видео не найдено";
-  document.getElementById("content").innerHTML = `
-    <div class="empty">
-      <div class="empty-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="2" y="3" width="20" height="14" rx="2"/>
-          <path d="M8 21h8M12 17v4"/>
-        </svg>
-      </div>
-      <h3>Видео не найдено</h3>
-      <p>Открой страницу с видео — YouTube, VK, Instagram, GetCourse</p>
-    </div>`;
+  document.getElementById("content").innerHTML = `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><h3>Видео не найдено</h3><p>Открой страницу с видео — YouTube, VK, Instagram, GetCourse</p></div>`;
 }
 
 function renderList(videos) {
@@ -85,50 +76,13 @@ function buildCard(video) {
   const platform = PLATFORM_LABELS[video.type] || "Видео";
   const title = cleanTitle(video.pageTitle);
   const isHls = HLS_PLATFORMS.has(video.type);
-
-  const qualityBlock = isHls ? `
-    <div class="qlabel">Качество</div>
-    <div class="qgrid">
-      ${QUALITIES.map((q, i) => `
-        <button class="qbtn ${q.height === selectedHeight ? "sel" : ""} ${i === QUALITIES.length-1 ? "best" : ""}"
-                data-h="${q.height}">
-          <span class="qr">${q.label}</span>
-          <span class="qs">${q.sub}</span>
-          <span class="qsize" id="size-${video.id}-${q.height}">-</span>
-        </button>`).join("")}
-    </div>` : `
-    <div class="quality-auto">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg>
-      Лучшее доступное качество
-    </div>`;
-
-  card.innerHTML = `
-    <div class="card-tag tag-${video.type}">${platform}</div>
-    <div class="card-title">${esc(title)}</div>
-    ${qualityBlock}
-    <div class="actions">
-      <button class="btn btn-dl">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        Скачать
-      </button>
-    </div>
-    <div class="progress-wrap" id="pw-${video.id}">
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="pb-${video.id}"></div>
-      </div>
-      <div class="progress-text">
-        <span id="pt-${video.id}">Подготовка...</span>
-        <span id="pp-${video.id}">0 MB / 0 MB (0%)</span>
-      </div>
-    </div>
-  `;
-
+  const qualityBlock = isHls ? `<div class="qlabel">Качество</div><div class="qgrid">${QUALITIES.map((q, i) =>
+    `<button class="qbtn ${q.height === selectedHeight ? "sel" : ""} ${i === QUALITIES.length-1 ? "best" : ""}" data-h="${q.height}">
+      <span class="qr">${q.label}</span>
+      <span class="qs">${q.sub}</span>
+      <span class="qsize" id="size-${video.id}-${q.height}">-</span>
+    </button>`).join("")}</div>` : `<div class="quality-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Лучшее доступное качество</div>`;
+  card.innerHTML = `<div class="card-tag tag-${video.type}">${platform}</div><div class="card-title">${esc(title)}</div>${qualityBlock}<div class="actions"><button class="btn btn-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Скачать</button></div><div class="progress-wrap" id="pw-${video.id}"><div class="progress-bar-bg"><div class="progress-bar-fill" id="pb-${video.id}"></div></div><div class="progress-text"><span id="pt-${video.id}">Подготовка...</span><span id="pp-${video.id}">0 MB / 0 MB (0%)</span></div></div>`;
   if (isHls) {
     fetchVideoSizes(video.url, video.id);
     card.querySelectorAll(".qbtn").forEach(btn => {
@@ -139,19 +93,16 @@ function buildCard(video) {
       });
     });
   }
-
   card.querySelector(".btn-dl").addEventListener("click", () => {
     startDownload(video, PAGE_PLATFORMS.has(video.type) ? null : selectedHeight, card);
   });
-
   return card;
 }
 
 async function fetchVideoSizes(videoUrl, videoId) {
   try {
-    console.log(`[SIZE] 📡 Запрос к: ${backendUrl}/api/downloads/sizes`);
-    console.log(`[SIZE] 🔑 Токен присутствует?`, !!token);
-
+    console.log(`[SIZE] Запрос к: ${backendUrl}/api/downloads/sizes`);
+    console.log(`[SIZE] Токен есть?`, !!token);
     const res = await fetch(`${backendUrl}/api/downloads/sizes`, {
       method: "POST",
       headers: {
@@ -160,22 +111,15 @@ async function fetchVideoSizes(videoUrl, videoId) {
       },
       body: JSON.stringify({ video_url: videoUrl }),
     });
-
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`[SIZE] ❌ Ошибка HTTP ${res.status}:`, errorText);
-      
-      if (res.status === 401) {
-        console.error("[SIZE] ⚠️ Токен недействителен или истёк. Войди в аккаунт в настройках.");
-      } else if (res.status === 404) {
-        console.error("[SIZE] ⚠️ Эндпоинт /sizes не найден на сервере. Проверь, запущен ли правильный бэкенд.");
-      }
+      console.error(`[SIZE] Ошибка HTTP ${res.status}:`, errorText);
+      if (res.status === 401) console.error("[SIZE] Токен недействителен");
+      else if (res.status === 404) console.error("[SIZE] Эндпоинт /sizes не найден");
       return;
     }
-
     const data = await res.json();
-    console.log(`[SIZE] ✅ Ответ от сервера:`, data);
-
+    console.log(`[SIZE] Ответ:`, data);
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
@@ -190,7 +134,7 @@ async function fetchVideoSizes(videoUrl, videoId) {
       }
     });
   } catch (err) {
-    console.error("[SIZE] 🚨 Сетевая ошибка (возможно, CORS или сервер недоступен):", err);
+    console.error("[SIZE] Сетевая ошибка:", err);
   }
 }
 
@@ -205,16 +149,13 @@ async function startDownload(video, height, card) {
   const pb = card.querySelector(`#pb-${video.id}`);
   const pt = card.querySelector(`#pt-${video.id}`);
   const pp = card.querySelector(`#pp-${video.id}`);
-
   setDlState(dlBtn, "loading", "Отправка...");
   card.querySelectorAll(".qbtn").forEach(b => b.disabled = true);
   pw.classList.add("visible");
-
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const cookies = await chrome.cookies.getAll({ url: tab.url });
     const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
-
     const body = {
       video_url: video.url,
       title: video.pageTitle,
@@ -224,15 +165,12 @@ async function startDownload(video, height, card) {
       height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
       format: "best",
     };
-
     if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
-
     const res = await fetch(`${backendUrl}/api/downloads`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify(body),
     });
-
     if (res.status === 402) {
       const data = await res.json();
       throw new Error(data.detail?.message || "Лимит исчерпан");
@@ -244,29 +182,18 @@ async function startDownload(video, height, card) {
       throw new Error("Сессия истекла");
     }
     if (!res.ok) throw new Error(`Сервер вернул ${res.status}`);
-
     const { task_id } = await res.json();
     setDlState(dlBtn, "loading", "Скачивается...");
     pt.textContent = "Скачивается на сервере...";
-
     const filename = await pollStatus(task_id, pb, pt, pp);
-
     const fileUrl = `${backendUrl}/api/downloads/file/${task_id}`;
-    const fileRes = await fetch(fileUrl, {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-
-    if (!fileRes.ok) {
-      throw new Error(`Сервер вернул ${fileRes.status}`);
-    }
-
+    const fileRes = await fetch(fileUrl, { headers: { "Authorization": `Bearer ${token}` } });
+    if (!fileRes.ok) throw new Error(`Сервер вернул ${fileRes.status}`);
     const contentLength = fileRes.headers.get("content-length");
     const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
-
     const reader = fileRes.body.getReader();
     let downloaded = 0;
     const chunks = [];
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -281,7 +208,6 @@ async function startDownload(video, height, card) {
         pt.textContent = "Скачивается на Mac...";
       }
     }
-
     const blob = new Blob(chunks);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -291,17 +217,14 @@ async function startDownload(video, height, card) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
     pt.textContent = "Файл скачан";
     pp.textContent = "";
-
     setTimeout(() => {
       setDlState(dlBtn, "", "Скачать");
       card.querySelectorAll(".qbtn").forEach(b => b.disabled = false);
     }, 3000);
-
   } catch (err) {
     setDlState(dlBtn, "error", "Ошибка");
     pb.classList.add("error");
