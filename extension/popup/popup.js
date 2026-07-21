@@ -31,16 +31,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function updateFooter() {
   const el = document.getElementById("footerStatus");
-  if (!backendUrl) {
-    el.innerHTML = `️ <a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
+  if (!backendUrl || backendUrl.trim() === "") {
+    el.innerHTML = `<a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
     el.style.color = "var(--muted)";
   } else if (!token) {
-    el.innerHTML = ` <a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
+    el.innerHTML = `<a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
-      el.textContent = "👤 " + email;
+      el.textContent = "  " + email;
       el.style.color = "var(--green)";
     });
   }
