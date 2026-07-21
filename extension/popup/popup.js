@@ -219,6 +219,16 @@ async function startDownload(video, height, card) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    // Удаляем файл с сервера после успешного скачивания
+    try {
+      await fetch(`${backendUrl}/api/downloads/file/${task_id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      console.log(`[CLEANUP] Файл ${task_id} удалён с сервера`);
+    } catch (e) {
+      console.warn("[CLEANUP] Не удалось удалить файл с сервера:", e);
+    }
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
     pt.textContent = "Файл скачан";
