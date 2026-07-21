@@ -147,7 +147,7 @@ function buildCard(video) {
   return card;
 }
 
-async function async function fetchVideoSizes(videoUrl, videoId) {
+async function fetchVideoSizes(videoUrl, videoId) {
   try {
     console.log(`[SIZE] 📡 Запрос к: ${backendUrl}/api/downloads/sizes`);
     console.log(`[SIZE] 🔑 Токен присутствует?`, !!token);
