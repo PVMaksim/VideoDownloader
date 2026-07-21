@@ -33,11 +33,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 function updateFooter() {
   const el = document.getElementById("footerStatus");
   if (!backendUrl || backendUrl.trim() === "") {
-    el.innerHTML = `<a onclick="chrome.runtime.openOptionsPage()">настрой сервер</a>`;
+    el.innerHTML = `<a id="linkSettings" style="cursor:pointer;color:var(--muted);text-decoration:underline">настрой сервер</a>`;
     el.style.color = "var(--muted)";
+    document.getElementById("linkSettings").addEventListener("click", () => chrome.runtime.openOptionsPage());
   } else if (!token) {
-    el.innerHTML = `<a onclick="chrome.runtime.openOptionsPage()">войди в аккаунт</a>`;
+    el.innerHTML = `<a id="linkLogin" style="cursor:pointer;color:#f59e0b;text-decoration:underline">войди в аккаунт</a>`;
     el.style.color = "#f59e0b";
+    document.getElementById("linkLogin").addEventListener("click", () => chrome.runtime.openOptionsPage());
   } else {
     chrome.storage.local.get(["userEmail"], (result) => {
       const email = result.userEmail || "user@example.com";
