@@ -61,7 +61,10 @@ chrome.webRequest.onBeforeRequest.addListener(
     const { tabId, url } = details;
     if (tabId < 0) return;
     chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) return;
+      if (chrome.runtime.lastError) {
+        console.warn(`[WARN] Tab ${tabId} not found:`, chrome.runtime.lastError.message);
+        return;
+      }
       addVideo(tabId, url, tab && tab.title);
     });
   },
