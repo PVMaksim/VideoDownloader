@@ -28,9 +28,15 @@ function getPageVideo(tabUrl, tabTitle) {
   if (/vk.com\/video(-?\d+_\d+|.*z=video)|vkvideo.ru/.test(tabUrl)) {
     return { source: "page", type: "vk", url: tabUrl, quality: "best", pageTitle: tabTitle };
   }
-  if (/instagram.com\/(reel|p|stories)\//.test(tabUrl)) {
-    return { source: "page", type: "instagram", url: tabUrl, quality: "best", pageTitle: tabTitle };
-  }
+  if (/instagram.com\/(reels|reel|p|stories|tv)\/[a-zA-Z0-9]+/.test(tabUrl)) {
+      return {
+        source: "page",
+        type: "instagram",
+        url: tabUrl,
+        quality: "best",
+        pageTitle: tabTitle
+      };
+    }
   return null;
 }
 function videoHash(url) {
