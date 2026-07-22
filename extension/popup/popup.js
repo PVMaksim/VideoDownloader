@@ -1,9 +1,9 @@
 let selectedHeight = 1080;
 const QUALITIES = [
-  { label: "360p", height: 360, sub: "360p" },
-  { label: "480p", height: 480, sub: "480p" },
-  { label: "720p", height: 720, sub: "HD" },
-  { label: "1080p", height: 1080, sub: "Full HD" },
+  { label: "360p", height: 360 },
+  { label: "480p", height: 480 },
+  { label: "720p", height: 720 },
+  { label: "1080p", height: 1080 },
 ];
 const PLATFORM_LABELS = {
   getcourse: "GetCourse", kinescope: "Kinescope",
@@ -76,11 +76,10 @@ function buildCard(video) {
   const title = cleanTitle(video.pageTitle);
   const isHls = HLS_PLATFORMS.has(video.type);
   const qualityBlock = isHls ? `<div class="qlabel">Качество</div><div class="qgrid">${QUALITIES.map((q, i) =>
-    `<button class="qbtn ${q.height === selectedHeight ? "sel" : ""} ${i === QUALITIES.length-1 ? "best" : ""}" data-h="${q.height}">
-      <span class="qr">${q.label}</span>
-      <span class="qs">${q.sub}</span>
-      <span class="qsize" id="size-${video.id}-${q.height}">-</span>
-    </button>`).join("")}</div>` : `<div class="quality-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Лучшее доступное качество</div>`;
+  `<button class="qbtn ${q.height === selectedHeight ? "sel" : ""}" data-h="${q.height}">
+    <span class="qr">${q.label}</span>
+    <span class="qsize" id="size-${video.id}-${q.height}">-</span>
+  </button>`).join("")}</div>` : `<div class="quality-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Лучшее доступное качество</div>`;
   card.innerHTML = `<div class="card-tag tag-${video.type}">${platform}</div><div class="card-title">${esc(title)}</div>${qualityBlock}<div class="actions"><button class="btn btn-dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Скачать</button></div><div class="progress-wrap" id="pw-${video.id}"><div class="progress-bar-bg"><div class="progress-bar-fill" id="pb-${video.id}"></div></div><div class="progress-text"><span id="pt-${video.id}">Подготовка...</span><span id="pp-${video.id}">0 MB / 0 MB (0%)</span></div></div>`;
   if (isHls) {
     fetchVideoSizes(video.url, video.id);
