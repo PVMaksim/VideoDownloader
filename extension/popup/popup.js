@@ -101,7 +101,6 @@ function buildCard(video) {
 async function fetchVideoSizes(videoUrl, videoId) {
   try {
     console.log(`[SIZE] 📡 Запрос к: ${backendUrl}/api/downloads/sizes`);
-    console.log(`[SIZE] 🔑 Токен:`, !!token);
     const res = await fetch(`${backendUrl}/api/downloads/sizes`, {
       method: "POST",
       headers: {
@@ -110,13 +109,21 @@ async function fetchVideoSizes(videoUrl, videoId) {
       },
       body: JSON.stringify({ video_url: videoUrl }),
     });
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`[SIZE] ❌ HTTP ${res.status}:`, errorText);
+
+    if (res.status === 401) {
+      console.warn("[SIZE] ⚠️ Требуется авторизация. Войдите в аккаунт в настройках.");
       return;
     }
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[SIZE] ❌ Ошибка HTTP ${res.status}:`, errorText);
+      return;
+    }
+
     const data = await res.json();
     console.log(`[SIZE] ✅ Ответ:`, data);
+
     QUALITIES.forEach(q => {
       const sizeEl = document.getElementById(`size-${videoId}-${q.height}`);
       if (sizeEl && data.sizes) {
@@ -131,7 +138,7 @@ async function fetchVideoSizes(videoUrl, videoId) {
       }
     });
   } catch (err) {
-    console.error("[SIZE] 🚨 Ошибка:", err);
+    console.error("[SIZE] 🚨 Сетевая ошибка:", err);
   }
 }
 
@@ -161,8 +168,6 @@ async function startDownload(video, height, card) {
       user_agent: navigator.userAgent,
       height: selectedHeight ? parseInt(selectedHeight, 10) : 1080,
       format: "best",
-      write_subtitles: true, // Включаем субтитры
-      subtitles_lang: "en",   // Оригинал (английский)
     };
     if (!token) { alert("Сначала войди в аккаунт"); chrome.runtime.openOptionsPage(); return; }
     const res = await fetch(`${backendUrl}/api/downloads`, {
@@ -216,7 +221,8 @@ async function startDownload(video, height, card) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    // Удаляем файл с сервера
+
+    // Удаляем файл с сервера после успешного скачивания
     try {
       await fetch(`${backendUrl}/api/downloads/file/${task_id}`, {
         method: "DELETE",
@@ -226,6 +232,7 @@ async function startDownload(video, height, card) {
     } catch (e) {
       console.warn("[CLEANUP] Не удалось удалить:", e);
     }
+
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");
     pt.textContent = "Файл скачан";
