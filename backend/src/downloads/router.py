@@ -57,7 +57,7 @@ async def create_download(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={"code": code, "message": error_msg}
         )
-    
+
     # 2. 🚀 Отправляем задачу в Celery
     download_video.apply_async(
         args=[
@@ -72,7 +72,7 @@ async def create_download(
         ],
         queue="celery"
     )
-    
+
     # 3. Возвращаем ответ
     return DownloadResponse(
         task_id=download.task_id,
@@ -152,11 +152,11 @@ async def get_video_sizes(
     """Получить размеры видео для доступных качеств"""
     import yt_dlp
     import asyncio
-    
+
     video_url = req.get("video_url")
     if not video_url:
         raise HTTPException(status_code=400, detail="video_url required")
-    
+
     # Запускаем yt-dlp в потоке (blocking operation)
     def get_formats():
         ydl_opts = {
@@ -171,29 +171,49 @@ async def get_video_sizes(
         except Exception as e:
             print(f"Error extracting info: {e}")
             return None
-    
+
     # Выполняем в отдельном потоке
     loop = asyncio.get_event_loop()
     info = await loop.run_in_executor(None, get_formats)
-    
+
     if not info:
         return {"sizes": {}}
-    
+
     # Группируем форматы по высоте и находим максимальный размер
     sizes = {}
     qualities = [360, 480, 720, 1080, 1440, 2160]
-    
+
     for height in qualities:
         # Ищем все форматы с этой высотой
         formats = info.get('formats', [])
         relevant_formats = [
-            f for f in formats 
+            f for f in formats
             if f.get('height') == height and f.get('filesize')
         ]
-        
+
         if relevant_formats:
             # Берём максимальный размер (лучшее качество для этой высоты)
             max_size = max(f['filesize'] for f in relevant_formats)
             sizes[height] = max_size
-    
+
     return {"sizes": sizes}
+
+@router.delete("/file/{task_id}")
+async def delete_file(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить скачанный файл с сервера после получения клиентом"""
+    import os
+
+    download = await get_download(task_id, current_user.id, db)
+    path = await get_file_path(download)
+
+    deleted = False
+    if path.exists():
+        os.remove(path)
+        deleted = True
+        print(f"[CLEANUP] Файл {task_id} удалён с диска")
+
+    return {"deleted": deleted, "task_id": task_id}
