@@ -16,7 +16,8 @@ RUN curl -fsSL https://deno.land/install.sh | sh \
 # Копируем зависимости
 COPY pyproject.toml ./
 COPY requirements.txt ./
-RUN pip install uv && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --force-reinstall yt-dlp
 
 # Копируем код
 COPY alembic.ini ./alembic.ini
