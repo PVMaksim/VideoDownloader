@@ -204,16 +204,49 @@ async def delete_file(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Удалить скачанный файл с сервера после получения клиентом"""
+    """Удалить скачанный файл с сервера и запись из БД"""
     import os
+    from pathlib import Path
 
-    download = await get_download(task_id, current_user.id, db)
-    path = await get_file_path(download)
+    # 1. Ищем запись в БД
+    stmt = select(Download).where(
+        Download.task_id == task_id,
+        Download.user_id == current_user.id
+    )
+    result = await db.execute(stmt)
+    download = result.scalar_one_or_none()
 
-    deleted = False
-    if path.exists():
-        os.remove(path)
-        deleted = True
-        print(f"[CLEANUP] Файл {task_id} удалён с диска")
+    if not download:
+        raise HTTPException(status_code=404, detail="Запись не найдена")
 
-    return {"deleted": deleted, "task_id": task_id}
+    # 2. Удаляем файл с диска (если существует)
+    file_deleted = False
+    if download.filename:
+        # Пробуем несколько возможных путей
+        possible_paths = [
+            Path(settings.DOWNLOAD_DIR) / download.filename,
+            Path("/app/downloads") / download.filename,
+            Path("/tmp/videodownloader") / download.filename,
+        ]
+
+        for file_path in possible_paths:
+            if file_path.exists():
+                try:
+                    os.remove(file_path)
+                    file_deleted = True
+                    print(f"[CLEANUP] Файл удалён: {file_path}")
+                    break
+                except Exception as e:
+                    print(f"[CLEANUP] Ошибка удаления {file_path}: {e}")
+
+    # 3. Удаляем запись из БД
+    await db.delete(download)
+    await db.commit()
+
+    print(f"[CLEANUP] Запись {task_id} удалена из БД, файл удалён: {file_deleted}")
+
+    return {
+        "deleted": file_deleted,
+        "task_id": task_id,
+        "db_record_removed": True
+    }
