@@ -221,16 +221,13 @@ async function startDownload(video, height, card) {
     a.remove();
     URL.revokeObjectURL(url);
 
-    // Удаляем файл с сервера после успешного скачивания
-    try {
-      await fetch(`${backendUrl}/api/downloads/file/${task_id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` },
-      });
-      console.log(`[CLEANUP] Файл ${task_id} удалён с сервера`);
-    } catch (e) {
-      console.warn("[CLEANUP] Не удалось удалить:", e);
-    }
+    // Удаляем файл с сервера через background (надежнее, чем из попапа)
+    chrome.runtime.sendMessage({
+      type: "CLEANUP_FILE",
+      task_id: task_id,
+      token: token,
+      backendUrl: backendUrl
+    });
 
     setDlState(dlBtn, "done", "✓ Готово!");
     pb.classList.add("done");

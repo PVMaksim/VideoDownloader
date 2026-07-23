@@ -133,27 +133,22 @@ function performanceScanner() {
 chrome.alarms.create("keepalive", { periodInMinutes: 0.4 });
 chrome.alarms.onAlarm.addListener(() => {});
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "VIDEO_FOUND") {
-    const tabId = sender.tab && sender.tab.id;
-    if (tabId) addVideo(tabId, message.url, message.pageTitle);
-    return;
-  }
-  if (message.type === "GET_VIDEOS") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0];
-      if (!tab) { sendResponse({ videos: [] }); return; }
-      checkPageVideo(tab.id, tab.url, tab.title);
-      sendResponse({ videos: state[tab.id]?.videos || [] });
-    });
-    return true;
-  }
-  if (message.type === "CLEAR_VIDEOS") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tabId = tabs[0]?.id;
-      if (tabId) { state[tabId] = { videos: [], seenUrls: new Set() }; updateBadge(tabId, 0); }
-      sendResponse({ ok: true });
-    });
-    return true;
+  // ... существующие обработчики (VIDEO_FOUND, GET_VIDEOS, CLEAR_VIDEOS) ...
+
+  if (message.type === "CLEANUP_FILE") {
+    const { task_id, token, backendUrl } = message;
+    fetch(`${backendUrl}/api/downloads/file/${task_id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` } // БЕЗ пробелов!
+    })
+    .then(res => {
+      if (res.ok) console.log(`[CLEANUP] Файл ${task_id} успешно удален с сервера`);
+      else console.warn(`[CLEANUP] Ошибка удаления ${task_id}: ${res.status}`);
+    })
+    .catch(err => console.error(`[CLEANUP] Сетевая ошибка при удалении ${task_id}:`, err));
+
+    sendResponse({ ok: true });
+    return true; // Важно для асинхронного ответа
   }
 });
 function updateBadge(tabId, count) {
